@@ -73,7 +73,7 @@ def test_vandenborre_product_page():
 def test_vandenborre_search_cards():
     hits = vandenborre.parse_search(page("vandenborre_search"))
     assert hits[0] == Hit(
-        "https://www.vandenborre.be/koptelefoon/wh-1000xm5-pink", "SONY WH-1000XM5 PINK", 23400,
+        "https://www.vandenborre.be/koptelefoon/wh-1000xm5-pink", "SONY WH-1000XM5 PINK", 22200,  # shown Black Friday price, not the € 234 reference
         "https://image.vandenborre.be/WEB/images/products/300/sony_wh-1000xm5-pink_7736517_1.jpg",
     )
 

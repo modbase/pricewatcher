@@ -42,7 +42,7 @@ class Shop:
 
 1. **Overview**: row = image, name, Cheapest Shop + price, spread vs next Shop, last checked, stale flag. "Add product" button.
 2. **Add product**: name + optional EAN/MPN/ASIN, tick Shops. Per Shop show top 3 hits (title, price, image); pick one, paste a URL, or skip. Hit whose EAN/ASIN equals the input is pre-selected. Pick saves the Listing at once; its first check runs in the background (a browser fetch takes seconds).
-3. **Product detail**: table of all Listings (Shop, price, shipping, stock, status, last checked), price history chart per Listing, Target Price field, add/re-Match/remove Shop, delete.
+3. **Product detail**: table of all Listings (Shop, price, shipping, stock, status, last checked), price history chart per Listing, Target Price field, edit name and EAN/MPN/ASIN, add/re-Match/remove Shop, delete.
 
 ## UI
 
@@ -75,7 +75,7 @@ Modern look, no JS build step. Server-rendered Jinja templates plus:
 
 - Tested 2026-11-17: bol.com and coolblue.be work over plain HTTP with JSON-LD (bol.com includes shipping, Coolblue does not). amazon.nl, amazon.com.be and amazon.de all block plain HTTP (503 or captcha) but work through headless Chromium (Playwright), about 3 s per page. Amazon has no JSON-LD, so its adapter reads the buy box with selectors. amazon.de was dropped afterwards (not wanted as a Shop).
 - Tested 2026-11-17: mediamarkt.be works over plain HTTP. Search is a JSON-LD ItemList; the product page wraps a ProductGroup (the page's own product, incl. shipping and EAN) in a BuyAction, with other variants under `hasVariant`.
-- Tested 2026-11-17: vandenborre.be product pages work over plain HTTP with JSON-LD (incl. shipping and EAN). Search results are rendered client-side (Algolia), so search runs in the browser (about 5 s) and reads the result cards; an exact match redirects to the product page. Its search finds nothing for an EAN and gives fuzzy matches for an MPN, so it searches by name only.
+- Tested 2026-11-17: vandenborre.be product pages work over plain HTTP with JSON-LD (incl. shipping and EAN). Search results are rendered client-side (Algolia), so search runs in the browser (2-4 s) and reads the result cards; an exact match redirects to the product page. The page keeps polling, so the browser waits for cards, the redirect or the no-results message instead of network idle. Its search finds nothing for an EAN and gives fuzzy matches for an MPN, so it searches by name only.
 - Amazon sets the delivery country from the visitor's IP. From a Belgian IP (laptop, homelab) both show delivery to Belgium and the matching shipping fee, so no location cookie is needed. A VPN exit abroad would change prices.
 - Amazon finds nothing for some EANs; its search falls back to MPN, then name. An ASIN skips search and opens the product page.
 - Anti-bot: Amazon, bol.com, MediaMarkt, Vandenborre, Krefel and Fnac (likely DataDome, strict) may block plain HTTP or even headless Playwright. Untested; milestone 2 settles it for the first three. Fallback: skip a Shop rather than ship flaky scraping.

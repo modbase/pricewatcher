@@ -168,6 +168,25 @@ def first_check(listing_id: int, url: str) -> None:
             checks.record_if_current(con, listing_id, url, result)
 
 
+@app.post("/products/{product_id}/edit")
+def edit_product(
+    product_id: int,
+    name: Annotated[str, Form()],
+    ean: Annotated[str, Form()] = "",
+    mpn: Annotated[str, Form()] = "",
+    asin: Annotated[str, Form()] = "",
+):
+    if not name.strip():
+        raise HTTPException(422, "Name is required")
+    with db.connect() as con:
+        get_product(con, product_id)
+        con.execute(
+            "UPDATE product SET name = ?, ean = ?, mpn = ?, asin = ? WHERE id = ?",
+            (name.strip(), ean.strip() or None, mpn.strip() or None, asin.strip() or None, product_id),
+        )
+    return RedirectResponse(f"/products/{product_id}", status_code=303)
+
+
 @app.post("/products/{product_id}/target")
 def set_target(product_id: int, target: Annotated[str, Form()] = ""):
     cents = to_cents(target) if target.strip() else None  # empty clears the Target Price
