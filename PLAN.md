@@ -72,7 +72,9 @@ Modern look, no JS build step. Server-rendered Jinja templates plus:
 
 ## Risks and unknowns
 
-- Amazon prices depend on the delivery country: plain HTTP may get DE/NL VAT prices or a "does not ship to BE" page, and amazon.de shipping to Belgium is not free. The adapter likely needs a Belgian delivery-location cookie; verify in milestone 2.
+- Tested 2026-11-17: bol.com and coolblue.be work over plain HTTP with JSON-LD (bol.com includes shipping, Coolblue does not). amazon.nl, amazon.com.be and amazon.de all block plain HTTP (503 or captcha) but work through headless Chromium (Playwright), about 3 s per page. Amazon has no JSON-LD, so its adapter reads the buy box with selectors.
+- Amazon sets the delivery country from the visitor's IP. From a Belgian IP (laptop, homelab) all three show delivery to Belgium and the matching shipping fee, so no location cookie is needed. A VPN exit abroad would change prices.
+- Amazon finds nothing for some EANs; its search falls back to MPN, then name. An ASIN skips search and opens the product page.
 - Anti-bot: Amazon, bol.com, MediaMarkt, Vandenborre, Krefel and Fnac (likely DataDome, strict) may block plain HTTP or even headless Playwright. Untested; milestone 2 settles it for the first three. Fallback: skip a Shop rather than ship flaky scraping.
 - Shipping cost is not always on the product page; "unknown" shipping is treated as 0 and shown as such.
 - Shop markup changes will break adapters; the stale flag makes this visible instead of silent.

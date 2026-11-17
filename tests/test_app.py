@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 
 from app import seed
 from app.main import app, eur
+from app.shops import SHOPS, Hit, Offer, Shop
 
 
 def test_eur():
@@ -20,3 +21,32 @@ def test_pages_on_seed_data(tmp_path, monkeypatch):
         assert "1 stale" in page
         assert c.get("/products/1").status_code == 200
         assert c.get("/products/999").status_code == 404
+
+
+class FakeShop(Shop):
+    key = "fake.be"
+
+    def search(self, query):
+        return [Hit("https://www.fake.be/p/1", "Other", 900), Hit("https://www.fake.be/p/2", "Right", 1000, ean="123")]
+
+    def hit(self, url):
+        return Hit(url, "Pasted", None)
+
+    def fetch(self, url):
+        return Offer(1000, 0, True)
+
+
+def test_add_flow(tmp_path, monkeypatch):
+    monkeypatch.setenv("PRICEWATCHER_DB", str(tmp_path / "test.db"))
+    monkeypatch.setitem(SHOPS, "fake.be", FakeShop())
+    with TestClient(app) as c:
+        r = c.post("/products", data={"name": "Thing", "ean": "123", "shop": ["fake.be"]}, follow_redirects=False)
+        assert r.headers["location"] == "/products/1/match?shop=fake.be"
+        hits = c.get("/products/1/match/fake.be").text
+        assert hits.index("Right") < hits.index("Other")  # EAN match first
+        assert "EAN match" in hits
+        assert "Not a fake.be URL" in c.post("/products/1/listings", data={"shop": "fake.be", "url": "https://bol.com/x"}).text
+        assert "Pasted" in c.post("/products/1/listings", data={"shop": "fake.be", "url": "https://www.fake.be/p/9"}).text
+        assert "€ 10,00" in c.get("/").text
+        c.post("/products/1/delete")
+        assert "No products yet" in c.get("/").text

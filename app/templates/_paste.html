@@ -1,0 +1,6 @@
+<form hx-post="/products/{{ product_id }}/listings" hx-target="closest section" hx-swap="outerHTML" class="mt-3 flex gap-2">
+  <input type="hidden" name="shop" value="{{ shop }}">
+  <input name="url" type="url" required placeholder="Or paste a {{ shop }} product URL"
+         class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-950">
+  <button class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">Use URL</button>
+</form>

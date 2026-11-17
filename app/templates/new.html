@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Add product - Pricewatcher{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-semibold">Add product</h1>
+<form method="post" action="/products" class="mt-6 max-w-lg space-y-4">
+  {% set input = "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900" %}
+  <label class="block">
+    <span class="text-sm font-medium">Name</span>
+    <input name="name" required autofocus class="{{ input }}" placeholder="Logitech MX Master 3S">
+  </label>
+  <div class="grid gap-4 sm:grid-cols-3">
+    <label class="block"><span class="text-sm font-medium">EAN</span><input name="ean" inputmode="numeric" class="{{ input }}"></label>
+    <label class="block"><span class="text-sm font-medium">MPN</span><input name="mpn" class="{{ input }}"></label>
+    <label class="block"><span class="text-sm font-medium">ASIN</span><input name="asin" class="{{ input }}"></label>
+  </div>
+  <p class="text-sm text-slate-500">Search uses the EAN first, then the MPN, then the name.</p>
+  <fieldset>
+    <legend class="text-sm font-medium">Shops</legend>
+    <div class="mt-2 flex flex-wrap gap-3">
+      {% for s in shops %}
+      <label class="flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 dark:border-slate-700">
+        <input type="checkbox" name="shop" value="{{ s }}" checked> {{ s }}
+      </label>
+      {% endfor %}
+    </div>
+  </fieldset>
+  <button class="rounded-lg bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-300">Search shops</button>
+</form>
+{% endblock %}
