@@ -3,13 +3,13 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, Form, HTTPException, Query, Request
+from fastapi import BackgroundTasks, FastAPI, Form, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from . import checks, db, pricing, scheduler
 from .pricing import eur
-from .shops import SHOPS, Offer
+from .shops import SHOPS
 from .shops import Query as SearchQuery
 from .shops.jsonld import to_cents
 
@@ -124,6 +124,7 @@ def match_shop(request: Request, product_id: int, shop: str):
 @app.post("/products/{product_id}/listings")
 def save_listing(
     request: Request,
+    tasks: BackgroundTasks,
     product_id: int,
     shop: Annotated[str, Form()],
     url: Annotated[str, Form()],
@@ -145,7 +146,6 @@ def save_listing(
             return templates.TemplateResponse(request, "_matched.html", ctx)
         url, title, image = hit.url, hit.title, hit.image or ""
 
-    result = adapter.fetch(url)
     with db.connect() as con:
         get_product(con, product_id)
         # Re-Match replaces the Listing; its old checks go with it (they belong to another page).
@@ -153,13 +153,19 @@ def save_listing(
         lid = con.execute(
             "INSERT INTO listing (product_id, shop, url, title) VALUES (?, ?, ?, ?)", (product_id, shop, url, title)
         ).lastrowid
-        checks.record(con, lid, result)
         if image:
             con.execute("UPDATE product SET image_url = ? WHERE id = ? AND image_url IS NULL", (image, product_id))
-    return templates.TemplateResponse(
-        request, "_matched.html", ctx | {"url": url, "title": title, "offer": result if isinstance(result, Offer) else None,
-                                         "error": None if isinstance(result, Offer) else result.reason},
-    )
+    tasks.add_task(first_check, lid, url)  # a browser fetch takes seconds: don't make Pick wait for it
+    return templates.TemplateResponse(request, "_matched.html", ctx | {"url": url, "title": title})
+
+
+def first_check(listing_id: int, url: str) -> None:
+    with db.connect() as con:
+        listing = con.execute("SELECT * FROM listing WHERE id = ?", (listing_id,)).fetchone()
+    if listing:
+        result = checks.fetch(listing)
+        with db.connect() as con:
+            checks.record_if_current(con, listing_id, url, result)
 
 
 @app.post("/products/{product_id}/target")
@@ -170,6 +176,13 @@ def set_target(product_id: int, target: Annotated[str, Form()] = ""):
     with db.connect() as con:
         get_product(con, product_id)
         con.execute("UPDATE product SET target_price = ? WHERE id = ?", (cents, product_id))
+    return RedirectResponse(f"/products/{product_id}", status_code=303)
+
+
+@app.post("/products/{product_id}/listings/{listing_id}/delete")
+def delete_listing(product_id: int, listing_id: int):
+    with db.connect() as con:
+        con.execute("DELETE FROM listing WHERE id = ? AND product_id = ?", (listing_id, product_id))
     return RedirectResponse(f"/products/{product_id}", status_code=303)
 
 

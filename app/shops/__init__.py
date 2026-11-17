@@ -5,5 +5,5 @@ from .coolblue import Coolblue
 
 SHOPS: dict[str, Shop] = {
     s.key: s
-    for s in (Bol(), Coolblue(), Amazon("amazon.com.be"), Amazon("amazon.nl"), Amazon("amazon.de"))
+    for s in (Bol(), Coolblue(), Amazon("amazon.com.be"), Amazon("amazon.nl"))
 }

@@ -7,11 +7,11 @@
   {% if title %}
   <p class="mt-2 text-sm">
     Matched <a href="{{ url }}" target="_blank" rel="noopener noreferrer" class="hover:underline">{{ title }}</a>
-    {% if offer %}: <span class="font-medium tabular-nums">{{ offer.price|eur }}</span>{% if not offer.in_stock %}, out of stock{% endif %}{% endif %}
+    <span class="text-slate-500">(checking the price in the background)</span>
   </p>
   {% endif %}
   {% if error %}
-  <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ "Saved, but the first check failed: " if title else "" }}{{ error }}</p>
-  {% if not title %}{% include "_paste.html" %}{% endif %}
+  <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ error }}</p>
+  {% include "_paste.html" %}
   {% endif %}
 </section>

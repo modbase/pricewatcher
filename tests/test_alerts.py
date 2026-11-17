@@ -61,6 +61,15 @@ def test_send_without_config_does_nothing(monkeypatch):
     alerts.send("hi")  # logs, no network
 
 
+def test_remove_listing(tmp_path, monkeypatch):
+    pid, a, b = setup(tmp_path, monkeypatch)
+    with TestClient(app) as c:
+        c.post(f"/products/{pid}/listings/{a}/delete")
+        c.post(f"/products/{pid + 1}/listings/{b}/delete")  # wrong Product: ignored
+    with db.connect() as con:
+        assert [r[0] for r in con.execute("SELECT id FROM listing")] == [b]
+
+
 def test_set_target(tmp_path, monkeypatch):
     pid, *_ = setup(tmp_path, monkeypatch)
     with TestClient(app) as c:

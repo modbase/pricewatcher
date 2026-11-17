@@ -9,7 +9,7 @@ PRODUCTS = [
         ("bol.com", 31999, 0, 1, 0, 2),
         ("coolblue.be", 29999, 0, 1, 0, 3),
         ("amazon.nl", 28950, 499, 1, 0, 2),
-        ("amazon.de", 27999, None, 1, 3, 20),
+        ("amazon.com.be", 27999, None, 1, 3, 20),
     ]),
     ("Nintendo Switch 2", None, [
         ("mediamarkt.be", 46999, 0, 0, 0, 4),

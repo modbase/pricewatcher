@@ -32,9 +32,8 @@ def run_due(stop: threading.Event, pause: tuple[float, float] = (10, 40)) -> int
         result = checks.fetch(l)  # network, outside any transaction
         alert = None
         with db.connect() as con:
-            # Skip if the Listing was deleted or re-Matched while we were fetching.
-            if con.execute("SELECT 1 FROM listing WHERE id = ? AND url = ?", (l["id"], l["url"])).fetchone():
-                alert = alerts.evaluate(con, l["product_id"], checks.record(con, l["id"], result))
+            if (check_id := checks.record_if_current(con, l["id"], l["url"], result)) is not None:
+                alert = alerts.evaluate(con, l["product_id"], check_id)
                 done += 1
         if alert:
             alerts.send(alert)  # after commit: no network inside the transaction

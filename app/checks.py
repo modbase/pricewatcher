@@ -31,6 +31,13 @@ def record(con, listing_id: int, result) -> int:
     return check_id
 
 
+def record_if_current(con, listing_id: int, url: str, result) -> int | None:
+    """Record unless the Listing was deleted or re-Matched while fetching; returns the check id."""
+    if con.execute("SELECT 1 FROM listing WHERE id = ? AND url = ?", (listing_id, url)).fetchone():
+        return record(con, listing_id, result)
+    return None
+
+
 def fetch(listing) -> object:
     """Network part of a check; run it outside a write transaction."""
     shop = SHOPS.get(listing["shop"])
