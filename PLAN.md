@@ -62,7 +62,7 @@ Modern look, no JS build step. Server-rendered Jinja templates plus:
 3. **Scheduler** (done): in-process loop, 6h + jitter, failure counting, stale logic and recovery, price history. Playwright fallback. Uvicorn runs with exactly 1 worker (set in the Dockerfile), or every check runs twice.
 4. **Alerts** (done): Telegram sender, Target Price and all-time-low triggers, de-dup so one drop alerts once. Also: Target Price form, remove a Shop from a Product, first check after Pick in the background.
 5. **Remaining adapters**, one at a time: mediamarkt.be (done), vandenborre.be (done), krefel.be (site down for maintenance on 2026-11-17, retry later), alternate.be (done). Each ships with a fixture test.
-6. **Polish**: history chart, re-Match, docs in README, homelab deploy (docker compose, volume for the SQLite file).
+6. **Polish**: history chart (done, total incl. known shipping per Shop, stepped line), re-Match, docs in README (done), homelab deploy (compose file written; image built and tested locally 2026-11-17, not yet on Proxmox) (docker compose, volume for the SQLite file; carry over the local `data/pricewatcher.db` so existing Products and history are kept).
 
 ## Tests
 

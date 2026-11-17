@@ -92,4 +92,44 @@
     </tbody>
   </table>
 </div>
+
+{% if history %}
+<div class="mt-6 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
+  <h2 class="mb-2 text-sm font-medium text-slate-500">Price history (incl. known shipping)</h2>
+  <div class="relative h-64"><canvas id="history" aria-label="Price history per shop" role="img"></canvas></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+  (() => {
+    const history = {{ history|tojson }};
+    const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+    const muted = dark ? "#94a3b8" : "#64748b", grid = dark ? "#1e293b" : "#e2e8f0";
+    const euro = v => new Intl.NumberFormat("nl-BE", {style: "currency", currency: "EUR"}).format(v);
+    const xs = Object.values(history).flat().map(p => p.x), DAY = 864e5;
+    const daily = Math.max(...xs) - Math.min(...xs) >= 2 * DAY;  // shorter spans label hours instead of days
+    const day = ms => daily
+      ? new Date(ms).toLocaleDateString("nl-BE", {day: "numeric", month: "short"})
+      : new Date(ms).toLocaleString("nl-BE", {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"});
+    new Chart(document.getElementById("history"), {
+      type: "line",
+      data: {datasets: Object.entries(history).map(([shop, data]) => ({label: shop, data, stepped: true, pointRadius: 2}))},
+      options: {
+        maintainAspectRatio: false,
+        interaction: {mode: "nearest", intersect: false},
+        scales: {
+          x: {type: "linear", ticks: {color: muted, callback: day, maxTicksLimit: 8, ...(daily && {stepSize: DAY})}, grid: {color: grid}},
+          y: {ticks: {color: muted, callback: euro}, grid: {color: grid}},
+        },
+        plugins: {
+          legend: {labels: {color: muted}},
+          tooltip: {callbacks: {
+            title: items => new Date(items[0].parsed.x).toLocaleString("nl-BE"),
+            label: i => `${i.dataset.label}: ${euro(i.parsed.y)}`,
+          }},
+        },
+      },
+    });
+  })();
+</script>
+{% endif %}
 {% endblock %}

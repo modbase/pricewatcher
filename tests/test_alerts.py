@@ -80,6 +80,16 @@ def test_edit_product(tmp_path, monkeypatch):
         assert tuple(con.execute("SELECT name, ean, mpn, asin FROM product").fetchone()) == ("Kettle 2", "123", None, "B0X")
 
 
+def test_history_chart_data(tmp_path, monkeypatch):
+    pid, a, b = setup(tmp_path, monkeypatch)
+    check(pid, a, 1000)
+    check(pid, a, None)  # failed check: no point
+    check(pid, b, 900)
+    with TestClient(app) as c:
+        page = c.get(f"/products/{pid}").text
+    assert page.count('"y": 10.0') == 1 and '"y": 9.0' in page and '"bol.com"' in page
+
+
 def test_set_target(tmp_path, monkeypatch):
     pid, *_ = setup(tmp_path, monkeypatch)
     with TestClient(app) as c:
