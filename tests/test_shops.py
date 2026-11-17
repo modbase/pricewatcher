@@ -6,6 +6,7 @@ import pytest
 from app.shops import Amazon, FetchError, Hit, Offer, Query, amazon, browser, jsonld, vandenborre
 from app.shops.bol import Bol, organic_links
 from app.shops.coolblue import Coolblue
+from app.shops.fnac import Fnac
 from app.shops.vandenborre import Vandenborre
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -86,6 +87,13 @@ def test_vandenborre_search_uses_name_and_follows_exact_match(monkeypatch):
     assert hits == [Hit("https://www.vandenborre.be/muis/mx-master-3s-bt", "LOGITECH MX MASTER 3S BT", 6900,
                         "https://image.vandenborre.be/WEB/images/products/superzoom/logitech_mx-master-3s-bt_7638744_1.jpg",
                         "5099206129382")]
+
+
+def test_fnac_product_page_and_hosts():
+    assert jsonld.parse_offer(page("fnac_product")) == Offer(11900, None, True, "0195949688591")
+    assert Fnac().owns("https://www.nl.fnac.be/x/a1") and Fnac().owns("https://www.fr.fnac.be/x/a1")
+    with pytest.raises(RuntimeError, match="paste the product URL"):
+        Fnac().search(Query("airpods"))
 
 
 def test_amazon_product_reads_buy_box_only():

@@ -61,7 +61,7 @@ Modern look, no JS build step. Server-rendered Jinja templates plus:
 2. **First adapters** (done): bol.com, coolblue.be, amazon (.nl/.com.be). Add-product flow with Match. Fixture-based parser tests (saved HTML per Shop).
 3. **Scheduler** (done): in-process loop, 6h + jitter, failure counting, stale logic and recovery, price history. Playwright fallback. Uvicorn runs with exactly 1 worker (set in the Dockerfile), or every check runs twice.
 4. **Alerts** (done): Telegram sender, Target Price and all-time-low triggers, de-dup so one drop alerts once. Also: Target Price form, remove a Shop from a Product, first check after Pick in the background.
-5. **Remaining adapters**, one at a time: mediamarkt.be (done), vandenborre.be (done), krefel.be, fnac.be, alternate.be. Each ships with a fixture test.
+5. **Remaining adapters**, one at a time: mediamarkt.be (done), vandenborre.be (done), krefel.be (site down for maintenance on 2026-11-17, retry later), fnac.be (done, paste URL only), alternate.be. Each ships with a fixture test.
 6. **Polish**: history chart, re-Match, docs in README, homelab deploy (docker compose, volume for the SQLite file).
 
 ## Tests
@@ -76,6 +76,8 @@ Modern look, no JS build step. Server-rendered Jinja templates plus:
 - Tested 2026-11-17: bol.com and coolblue.be work over plain HTTP with JSON-LD (bol.com includes shipping, Coolblue does not). amazon.nl, amazon.com.be and amazon.de all block plain HTTP (503 or captcha) but work through headless Chromium (Playwright), about 3 s per page. Amazon has no JSON-LD, so its adapter reads the buy box with selectors. amazon.de was dropped afterwards (not wanted as a Shop).
 - Tested 2026-11-17: mediamarkt.be works over plain HTTP. Search is a JSON-LD ItemList; the product page wraps a ProductGroup (the page's own product, incl. shipping and EAN) in a BuyAction, with other variants under `hasVariant`.
 - Tested 2026-11-17: vandenborre.be product pages work over plain HTTP with JSON-LD (incl. shipping and EAN). Search results are rendered client-side (Algolia), so search runs in the browser (2-4 s) and reads the result cards; an exact match redirects to the product page. The page keeps polling, so the browser waits for cards, the redirect or the no-results message instead of network idle. Its search finds nothing for an EAN and gives fuzzy matches for an MPN, so it searches by name only.
+- Tested 2026-11-17: fnac.be product pages (nl. and fr.fnac.be) work over plain HTTP with JSON-LD (price, stock, EAN; no shipping). Search answers 403 with a captcha, also in headless Chromium, so the Fnac adapter has no search: Matching means pasting the product URL. Not working around the captcha.
+- 2026-11-17: krefel.be answered every request (plain HTTP and browser) with a 500 maintenance page; adapter postponed.
 - Amazon sets the delivery country from the visitor's IP. From a Belgian IP (laptop, homelab) both show delivery to Belgium and the matching shipping fee, so no location cookie is needed. A VPN exit abroad would change prices.
 - Amazon finds nothing for some EANs; its search falls back to MPN, then name. An ASIN skips search and opens the product page.
 - Anti-bot: Amazon, bol.com, MediaMarkt, Vandenborre, Krefel and Fnac (likely DataDome, strict) may block plain HTTP or even headless Playwright. Untested; milestone 2 settles it for the first three. Fallback: skip a Shop rather than ship flaky scraping.
