@@ -15,6 +15,11 @@
     </div>
   </header>
   <main class="mx-auto max-w-5xl px-4 py-6">
+    {% if checking %}
+    <p class="mb-4 rounded-lg bg-sky-100 px-4 py-2 text-sm text-sky-800 dark:bg-sky-900/50 dark:text-sky-300">
+      Checking prices in the background. Reload in a minute to see the new prices.
+    </p>
+    {% endif %}
     {% block content %}{% endblock %}
   </main>
 </body>

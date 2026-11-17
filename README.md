@@ -18,6 +18,9 @@ Open http://127.0.0.1:8000. The database is `data/pricewatcher.db` (override wit
 
 Tests: `.venv/Scripts/python -m pytest -q` (no network; Shop pages are saved fixtures).
 
+Prices are rechecked about every 6 hours. To check right away, use **Check now** on a Product's page
+or **Check all now** on the overview; the check runs in the background, so reload the page after a minute.
+
 ## Telegram alerts
 
 Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` (in Docker: a `.env` file next to `docker-compose.yml`).

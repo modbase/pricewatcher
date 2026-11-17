@@ -2,6 +2,10 @@
 {% block content %}
 {% if not rows %}
 <p class="text-slate-500">No products yet.</p>
+{% else %}
+<form method="post" action="/check" class="mb-3 flex justify-end">
+  <button class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800" title="Check every Shop of every Product now instead of waiting for the next round">Check all now</button>
+</form>
 {% endif %}
 <ul class="space-y-3">
   {% for r in rows %}
