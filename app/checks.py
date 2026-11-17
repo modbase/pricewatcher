@@ -7,14 +7,14 @@ def now() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def record(con, listing_id: int, result) -> None:
-    """Store one check result: an Offer resets the fail count, a FetchError adds one."""
+def record(con, listing_id: int, result) -> int:
+    """Store one check result: an Offer resets the fail count, a FetchError adds one. Returns the check id."""
     ts = now()
     if isinstance(result, Offer):
-        con.execute(
+        check_id = con.execute(
             "INSERT INTO price_check (listing_id, checked_at, price, shipping, in_stock, ok) VALUES (?, ?, ?, ?, ?, 1)",
             (listing_id, ts, result.price, result.shipping, result.in_stock),
-        )
+        ).lastrowid
         con.execute(
             # Out of stock without a shown price keeps the last known price.
             "UPDATE listing SET fail_count = 0, last_price = COALESCE(?, last_price), last_shipping = ?,"
@@ -22,10 +22,13 @@ def record(con, listing_id: int, result) -> None:
             (result.price, result.shipping, result.in_stock, ts, listing_id),
         )
     else:
-        con.execute("INSERT INTO price_check (listing_id, checked_at, ok) VALUES (?, ?, 0)", (listing_id, ts))
+        check_id = con.execute(
+            "INSERT INTO price_check (listing_id, checked_at, ok) VALUES (?, ?, 0)", (listing_id, ts)
+        ).lastrowid
         con.execute(
             "UPDATE listing SET fail_count = fail_count + 1, last_checked = ? WHERE id = ?", (ts, listing_id)
         )
+    return check_id
 
 
 def fetch(listing) -> object:

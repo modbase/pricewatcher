@@ -8,15 +8,10 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from . import checks, db, pricing, scheduler
+from .pricing import eur
 from .shops import SHOPS, Offer
 from .shops import Query as SearchQuery
-
-
-def eur(cents) -> str:
-    if cents is None:
-        return "-"
-    euros, rest = divmod(cents, 100)
-    return f"€ {euros:,}".replace(",", ".") + f",{rest:02d}"
+from .shops.jsonld import to_cents
 
 
 def when(ts) -> str:
@@ -165,6 +160,17 @@ def save_listing(
         request, "_matched.html", ctx | {"url": url, "title": title, "offer": result if isinstance(result, Offer) else None,
                                          "error": None if isinstance(result, Offer) else result.reason},
     )
+
+
+@app.post("/products/{product_id}/target")
+def set_target(product_id: int, target: Annotated[str, Form()] = ""):
+    cents = to_cents(target) if target.strip() else None  # empty clears the Target Price
+    if target.strip() and not cents:
+        raise HTTPException(422, "Not a price")
+    with db.connect() as con:
+        get_product(con, product_id)
+        con.execute("UPDATE product SET target_price = ? WHERE id = ?", (cents, product_id))
+    return RedirectResponse(f"/products/{product_id}", status_code=303)
 
 
 @app.post("/products/{product_id}/delete")

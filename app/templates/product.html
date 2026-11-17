@@ -13,8 +13,14 @@
       {% for label, value in [("EAN", product.ean), ("MPN", product.mpn), ("ASIN", product.asin)] if value %}
       <span>{{ label }} {{ value }}</span>
       {% endfor %}
-      <span>Target price {{ product.target_price|eur if product.target_price is not none else "none" }}</span>
     </div>
+    <form method="post" action="/products/{{ product.id }}/target" class="mt-2 flex items-center gap-2 text-sm">
+      <label for="target" class="text-slate-500">Target price €</label>
+      <input id="target" name="target" inputmode="decimal" placeholder="none" size="8"
+             value="{{ (product.target_price|eur)[2:] if product.target_price is not none else '' }}"
+             class="rounded-lg border border-slate-300 bg-transparent px-2 py-1 tabular-nums dark:border-slate-700">
+      <button class="rounded-lg border border-slate-300 px-3 py-1 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">Save</button>
+    </form>
   </div>
   <div class="ml-auto flex shrink-0 items-center gap-2">
     <a href="/products/{{ product.id }}/match" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">Add shops</a>

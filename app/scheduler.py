@@ -8,7 +8,7 @@ import random
 import threading
 from datetime import UTC, datetime, timedelta
 
-from . import checks, db
+from . import alerts, checks, db
 
 INTERVAL = timedelta(hours=6)
 log = logging.getLogger(__name__)
@@ -30,11 +30,14 @@ def run_due(stop: threading.Event, pause: tuple[float, float] = (10, 40)) -> int
         if stop.is_set():
             break
         result = checks.fetch(l)  # network, outside any transaction
+        alert = None
         with db.connect() as con:
             # Skip if the Listing was deleted or re-Matched while we were fetching.
             if con.execute("SELECT 1 FROM listing WHERE id = ? AND url = ?", (l["id"], l["url"])).fetchone():
-                checks.record(con, l["id"], result)
+                alert = alerts.evaluate(con, l["product_id"], checks.record(con, l["id"], result))
                 done += 1
+        if alert:
+            alerts.send(alert)  # after commit: no network inside the transaction
         stop.wait(random.uniform(*pause))  # jitter, and no hammering of one Shop
     return done
 

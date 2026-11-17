@@ -1,6 +1,13 @@
 STALE_AFTER = 3  # consecutive failed checks
 
 
+def eur(cents) -> str:
+    if cents is None:
+        return "-"
+    euros, rest = divmod(cents, 100)
+    return f"€ {euros:,}".replace(",", ".") + f",{rest:02d}"
+
+
 def is_stale(listing) -> bool:
     return listing["fail_count"] >= STALE_AFTER
 
