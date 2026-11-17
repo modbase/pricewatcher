@@ -18,10 +18,10 @@ Finding the Listing of a Product at a Shop from a name, product code or ASIN, an
 The Shop whose in-stock, non-stale Listing has the lowest price (including shipping when known) for a Product.
 
 **Stale Listing**
-A Listing whose last 3 checks failed. It shows its last good price but no longer counts toward the Cheapest Shop. One successful check makes it a normal Listing again.
+A Listing whose last 3 checks failed (the number is a setting). It shows its last good price but no longer counts toward the Cheapest Shop. One successful check makes it a normal Listing again.
 
 **Target Price**
 An optional per-Product price; an alert fires when the Cheapest Shop's price falls below it.
 
 **All-time Low**
-The lowest Cheapest Shop price ever recorded for a Product. A new All-time Low triggers an alert, whether or not a Target Price is set.
+The lowest Cheapest Shop price ever recorded for a Product. A new All-time Low triggers an alert, whether or not a Target Price is set, unless Settings turn that alert off or the drop is smaller than the minimum set there.
