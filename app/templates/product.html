@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }} - Pricewatcher{% endblock %}
+{% block content %}
+<a href="/" class="text-sm text-slate-500 hover:underline">&larr; All products</a>
+
+<div class="mt-3 flex items-start gap-4">
+  {% if product.image_url %}
+  <img src="{{ product.image_url }}" alt="" class="size-20 shrink-0 rounded-lg bg-white object-contain">
+  {% endif %}
+  <div>
+    <h1 class="text-2xl font-semibold">{{ product.name }}</h1>
+    <div class="mt-1 flex flex-wrap gap-x-4 text-sm text-slate-500">
+      {% for label, value in [("EAN", product.ean), ("MPN", product.mpn), ("ASIN", product.asin)] if value %}
+      <span>{{ label }} {{ value }}</span>
+      {% endfor %}
+      <span>Target price {{ product.target_price|eur if product.target_price is not none else "none" }}</span>
+    </div>
+  </div>
+</div>
+
+<div class="mt-6 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-100 text-left text-slate-500 dark:bg-slate-900">
+      <tr>
+        <th class="px-4 py-2 font-medium">Shop</th>
+        <th class="px-4 py-2 font-medium">Price</th>
+        <th class="px-4 py-2 font-medium">Shipping</th>
+        <th class="px-4 py-2 font-medium">Total</th>
+        <th class="px-4 py-2 font-medium">Stock</th>
+        <th class="px-4 py-2 font-medium">Last checked</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-200 bg-white dark:divide-slate-800 dark:bg-slate-950">
+      {% for l in listings %}
+      <tr>
+        <td class="px-4 py-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <a href="{{ l.url }}" target="_blank" rel="noopener noreferrer" class="font-medium hover:underline">{{ l.shop }}</a>
+            {% if l.id == best_id %}
+            <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">Cheapest</span>
+            {% endif %}
+            {% if is_stale(l) %}
+            <span class="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-800 dark:bg-red-900/50 dark:text-red-300">Stale</span>
+            {% endif %}
+          </div>
+          <div class="max-w-xs truncate text-xs text-slate-500">{{ l.title }}</div>
+        </td>
+        <td class="px-4 py-3 tabular-nums">{{ l.last_price|eur }}</td>
+        <td class="px-4 py-3 tabular-nums">
+          {% if l.last_shipping is none %}<span class="text-slate-500">unknown</span>{% else %}{{ l.last_shipping|eur }}{% endif %}
+        </td>
+        <td class="px-4 py-3 font-medium tabular-nums">{{ total(l)|eur if l.last_price is not none else "-" }}</td>
+        <td class="px-4 py-3">
+          {% if l.last_in_stock is none %}-{% elif l.last_in_stock %}In stock{% else %}<span class="text-amber-600 dark:text-amber-400">Out of stock</span>{% endif %}
+        </td>
+        <td class="px-4 py-3 whitespace-nowrap text-slate-500">{{ l.last_checked|when }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="px-4 py-6 text-center text-slate-500">No shops matched yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

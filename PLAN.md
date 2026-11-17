@@ -17,6 +17,8 @@ One row per Product, cheapest Shop shown, click through for all Shop prices. Ter
 
 ## Data model (SQLite)
 
+All amounts are stored as integer euro cents.
+
 - `product(id, name, ean, mpn, asin, image_url, target_price, last_alert_price, created_at)`
 - `listing(id, product_id, shop, url, title, fail_count, last_price, last_in_stock, last_shipping, last_checked)`; unique (product_id, shop). Stale is derived (`fail_count >= 3`), not stored.
 - `price_check(id, listing_id, checked_at, price, shipping, in_stock, ok)`; history for charts and the all-time-low check
