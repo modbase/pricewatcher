@@ -3,6 +3,8 @@ import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 
+from . import settings
+
 # All amounts are integer euro cents.
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS product (
@@ -39,6 +41,10 @@ CREATE TABLE IF NOT EXISTS price_check (
     ok         INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS price_check_listing ON price_check (listing_id, checked_at);
+CREATE TABLE IF NOT EXISTS setting (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL  -- JSON
+);
 """
 
 
@@ -63,3 +69,4 @@ def connect():
 def init():
     with connect() as con:
         con.executescript(SCHEMA)
+        settings.load(con)

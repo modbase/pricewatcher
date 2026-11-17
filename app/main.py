@@ -1,3 +1,4 @@
+import os
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -8,7 +9,7 @@ from fastapi import BackgroundTasks, FastAPI, Form, HTTPException, Query, Reques
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from . import checks, db, pricing, scheduler
+from . import alerts, checks, db, pricing, scheduler, settings
 from .pricing import eur
 from .shops import SHOPS
 from .shops import Query as SearchQuery
@@ -191,6 +192,48 @@ def check_product(tasks: BackgroundTasks, product_id: int):
         get_product(con, product_id)
     tasks.add_task(check_now, product_id)
     return RedirectResponse(f"/products/{product_id}?checking=1", status_code=303)
+
+
+@app.get("/settings")
+def settings_page(request: Request, saved: bool = False, telegram: str = ""):
+    return templates.TemplateResponse(request, "settings.html", {
+        "s": settings.current,
+        "intervals": settings.INTERVALS,
+        "saved": saved,
+        "telegram": telegram,
+        "telegram_configured": bool(os.environ.get("TELEGRAM_BOT_TOKEN") and os.environ.get("TELEGRAM_CHAT_ID")),
+    })
+
+
+def hour(value: str) -> int | None:
+    return int(value) if value.strip() else None
+
+
+@app.post("/settings")
+def save_settings(
+    interval_hours: Annotated[int, Form()],
+    stale_after: Annotated[int, Form()],
+    low_min_drop_pct: Annotated[int, Form()],
+    low_alerts: Annotated[bool, Form()] = False,  # an unchecked box is not sent
+    quiet_from: Annotated[str, Form()] = "",
+    quiet_until: Annotated[str, Form()] = "",
+):
+    values = {
+        "interval_hours": interval_hours, "stale_after": stale_after, "low_alerts": low_alerts,
+        "low_min_drop_pct": low_min_drop_pct, "quiet_from": hour(quiet_from), "quiet_until": hour(quiet_until),
+    }
+    try:
+        with db.connect() as con:
+            settings.save(con, values)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return RedirectResponse("/settings?saved=1", status_code=303)
+
+
+@app.post("/settings/telegram-test")
+def telegram_test():
+    sent = alerts.send("Pricewatcher test message: alerts reach this chat.")
+    return RedirectResponse(f"/settings?telegram={'sent' if sent else 'failed'}", status_code=303)
 
 
 @app.post("/products/{product_id}/edit")

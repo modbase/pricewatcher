@@ -1,4 +1,4 @@
-STALE_AFTER = 3  # consecutive failed checks
+from . import settings
 
 
 def eur(cents) -> str:
@@ -9,7 +9,7 @@ def eur(cents) -> str:
 
 
 def is_stale(listing) -> bool:
-    return listing["fail_count"] >= STALE_AFTER
+    return listing["fail_count"] >= settings.current["stale_after"]
 
 
 def total(listing) -> int:

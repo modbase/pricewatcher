@@ -1,4 +1,4 @@
-"""Background checker: rechecks every Listing about every 6h, one at a time.
+"""Background checker: rechecks every Listing once per check interval (Settings), one at a time.
 The user can also check one Product, or all of them, right away (check_now).
 
 Runs in one thread inside the web process, so uvicorn must run with exactly 1 worker.
@@ -9,14 +9,13 @@ import random
 import threading
 from datetime import UTC, datetime, timedelta
 
-from . import alerts, checks, db
+from . import alerts, checks, db, settings
 
-INTERVAL = timedelta(hours=6)
 log = logging.getLogger(__name__)
 
 
 def due(con) -> list:
-    cutoff = (datetime.now(UTC) - INTERVAL).strftime("%Y-%m-%d %H:%M:%S")
+    cutoff = (datetime.now(UTC) - timedelta(hours=settings.current["interval_hours"])).strftime("%Y-%m-%d %H:%M:%S")
     return con.execute(
         "SELECT * FROM listing WHERE last_checked IS NULL OR last_checked <= ? ORDER BY last_checked", (cutoff,)
     ).fetchall()
@@ -47,8 +46,19 @@ def run(listings, stop: threading.Event, pause: tuple[float, float]) -> int:
     return done
 
 
+def is_quiet(now: datetime | None = None) -> bool:
+    """True during the quiet hours from Settings, when scheduled checks wait."""
+    start, end = settings.current["quiet_from"], settings.current["quiet_until"]
+    if start is None:
+        return False
+    hour = (now or datetime.now(settings.TZ)).astimezone(settings.TZ).hour
+    return start <= hour < end if start < end else hour >= start or hour < end  # the window may cross midnight
+
+
 def run_due(stop: threading.Event, pause: tuple[float, float] = (10, 40)) -> int:
-    """Check every due Listing; returns how many were checked."""
+    """Check every due Listing, unless it is quiet hours; returns how many were checked."""
+    if is_quiet():
+        return 0
     with db.connect() as con:
         listings = due(con)
     return run(listings, stop, pause)
