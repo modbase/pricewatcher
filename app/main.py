@@ -1,5 +1,6 @@
 from collections import defaultdict
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -219,6 +220,17 @@ def product(request: Request, product_id: int):
         listings = con.execute(
             "SELECT * FROM listing WHERE product_id = ? ORDER BY shop", (product_id,)
         ).fetchall()
+        points = con.execute(
+            "SELECT l.shop, c.checked_at, c.price + coalesce(c.shipping, 0) AS total FROM price_check c"
+            " JOIN listing l ON l.id = c.listing_id"
+            " WHERE l.product_id = ? AND c.ok AND c.price IS NOT NULL ORDER BY c.checked_at",
+            (product_id,),
+        ).fetchall()
+
+    history = defaultdict(list)  # shop -> [{x: epoch ms (UTC), y: euros}], same total as the table
+    for c in points:
+        ms = datetime.strptime(c["checked_at"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC).timestamp() * 1000
+        history[c["shop"]].append({"x": ms, "y": c["total"] / 100})
 
     r = pricing.ranked(listings)
     ids = {l["id"] for l in r}
@@ -226,4 +238,5 @@ def product(request: Request, product_id: int):
         "product": p,
         "listings": r + [l for l in listings if l["id"] not in ids],
         "best_id": r[0]["id"] if r else None,
+        "history": history,
     })

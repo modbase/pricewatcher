@@ -2,7 +2,9 @@ FROM python:3.13-slim
 
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt \
+# Playwright's bundled Node needs libatomic1 before it can install Chromium's own dependencies.
+RUN apt-get update && apt-get install -y --no-install-recommends libatomic1 && rm -rf /var/lib/apt/lists/* \
+ && pip install --no-cache-dir -r requirements.txt \
  && python -m playwright install --with-deps --only-shell chromium
 COPY app ./app
 
