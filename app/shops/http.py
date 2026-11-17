@@ -15,4 +15,8 @@ def get(url: str, timeout: float = 20) -> tuple[str, str]:
         body = r.read()
         if r.headers.get("Content-Encoding") == "gzip":
             body = gzip.decompress(body)
-        return r.geturl(), body.decode(r.headers.get_content_charset() or "utf-8", "replace")
+        charset = r.headers.get_content_charset() or "utf-8"
+        try:
+            return r.geturl(), body.decode(charset)
+        except UnicodeDecodeError:  # Alternate claims UTF-8 but sends cp1252 bytes
+            return r.geturl(), body.decode("cp1252", "replace")

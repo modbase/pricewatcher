@@ -19,6 +19,7 @@ def test_pages_on_seed_data(tmp_path, monkeypatch):
         assert "€ 294,49" in page  # amazon.nl 289,50 + 4,99 shipping beats coolblue 299,99
         assert "No in-stock offer" in page  # Switch 2: all out of stock
         assert "1 stale" in page
+        assert "€ 384,48" in page and "1 without an in-stock offer not counted" in page  # total: 89,99 + 294,49
         assert c.get("/products/1").status_code == 200
         assert c.get("/products/999").status_code == 404
 

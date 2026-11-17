@@ -39,4 +39,14 @@
   </li>
   {% endfor %}
 </ul>
+{% if rows %}
+{% set priced = rows|selectattr("best")|list %}
+<div class="mt-4 flex items-baseline justify-between gap-4 px-4 text-sm">
+  <span class="text-slate-500">
+    Total at the Cheapest Shops, incl. known shipping
+    {%- if priced|length < rows|length %} ({{ rows|length - priced|length }} without an in-stock offer not counted){% endif %}
+  </span>
+  <span class="text-lg font-semibold tabular-nums">{{ priced|sum(attribute="best_total")|eur }}</span>
+</div>
+{% endif %}
 {% endblock %}

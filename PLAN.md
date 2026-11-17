@@ -14,7 +14,7 @@ One row per Product, cheapest Shop shown, click through for all Shop prices. Ter
   - New all-time low: the Cheapest price is lower than any Cheapest price recorded for that Product before. Fires with or without a Target Price, but never on the Product's first successful check.
   - De-dup: an alert fires only when the Cheapest price is below `product.last_alert_price` (or none is stored yet); sending sets it. A price rise does not reset it, so bouncing prices don't re-alert.
   - Only background checks alert; the check made while Matching a Shop does not (you are looking at that price already).
-- Shops: amazon.nl, amazon.com.be, bol.com, coolblue.be, mediamarkt.be, vandenborre.be, krefel.be, fnac.be, alternate.be. One code adapter per Shop.
+- Shops: amazon.nl, amazon.com.be, bol.com, coolblue.be, mediamarkt.be, vandenborre.be, krefel.be, alternate.be. One code adapter per Shop. fnac.be was dropped (2026-11-17): its search is behind a captcha.
 
 ## Data model (SQLite)
 
@@ -40,7 +40,7 @@ class Shop:
 
 ## Screens
 
-1. **Overview**: row = image, name, Cheapest Shop + price, spread vs next Shop, last checked, stale flag. "Add product" button.
+1. **Overview**: row = image, name, Cheapest Shop + price, spread vs next Shop, last checked, stale flag. "Add product" button. A total at the bottom: the sum of every Product's Cheapest price (Products without an in-stock offer are left out and counted).
 2. **Add product**: name + optional EAN/MPN/ASIN, tick Shops. Per Shop show top 3 hits (title, price, image); pick one, paste a URL, or skip. Hit whose EAN/ASIN equals the input is pre-selected. Pick saves the Listing at once; its first check runs in the background (a browser fetch takes seconds).
 3. **Product detail**: table of all Listings (Shop, price, shipping, stock, status, last checked), price history chart per Listing, Target Price field, edit name and EAN/MPN/ASIN, add/re-Match/remove Shop, delete.
 
@@ -61,7 +61,7 @@ Modern look, no JS build step. Server-rendered Jinja templates plus:
 2. **First adapters** (done): bol.com, coolblue.be, amazon (.nl/.com.be). Add-product flow with Match. Fixture-based parser tests (saved HTML per Shop).
 3. **Scheduler** (done): in-process loop, 6h + jitter, failure counting, stale logic and recovery, price history. Playwright fallback. Uvicorn runs with exactly 1 worker (set in the Dockerfile), or every check runs twice.
 4. **Alerts** (done): Telegram sender, Target Price and all-time-low triggers, de-dup so one drop alerts once. Also: Target Price form, remove a Shop from a Product, first check after Pick in the background.
-5. **Remaining adapters**, one at a time: mediamarkt.be (done), vandenborre.be (done), krefel.be (site down for maintenance on 2026-11-17, retry later), fnac.be (done, paste URL only), alternate.be. Each ships with a fixture test.
+5. **Remaining adapters**, one at a time: mediamarkt.be (done), vandenborre.be (done), krefel.be (site down for maintenance on 2026-11-17, retry later), alternate.be (done). Each ships with a fixture test.
 6. **Polish**: history chart, re-Match, docs in README, homelab deploy (docker compose, volume for the SQLite file).
 
 ## Tests
@@ -76,11 +76,12 @@ Modern look, no JS build step. Server-rendered Jinja templates plus:
 - Tested 2026-11-17: bol.com and coolblue.be work over plain HTTP with JSON-LD (bol.com includes shipping, Coolblue does not). amazon.nl, amazon.com.be and amazon.de all block plain HTTP (503 or captcha) but work through headless Chromium (Playwright), about 3 s per page. Amazon has no JSON-LD, so its adapter reads the buy box with selectors. amazon.de was dropped afterwards (not wanted as a Shop).
 - Tested 2026-11-17: mediamarkt.be works over plain HTTP. Search is a JSON-LD ItemList; the product page wraps a ProductGroup (the page's own product, incl. shipping and EAN) in a BuyAction, with other variants under `hasVariant`.
 - Tested 2026-11-17: vandenborre.be product pages work over plain HTTP with JSON-LD (incl. shipping and EAN). Search results are rendered client-side (Algolia), so search runs in the browser (2-4 s) and reads the result cards; an exact match redirects to the product page. The page keeps polling, so the browser waits for cards, the redirect or the no-results message instead of network idle. Its search finds nothing for an EAN and gives fuzzy matches for an MPN, so it searches by name only.
-- Tested 2026-11-17: fnac.be product pages (nl. and fr.fnac.be) work over plain HTTP with JSON-LD (price, stock, EAN; no shipping). Search answers 403 with a captcha, also in headless Chromium, so the Fnac adapter has no search: Matching means pasting the product URL. Not working around the captcha.
+- Tested 2026-11-17: fnac.be product pages (nl. and fr.fnac.be) work over plain HTTP with JSON-LD (price, stock, EAN; no shipping). Search answers 403 with a captcha, also in headless Chromium, Not working around the captcha; a paste-only adapter was built, then dropped.
+- Tested 2026-11-17: alternate.be works over plain HTTP. Search returns server-rendered cards (an EAN finds the exact product); product pages have JSON-LD with price, stock, shipping (€ 6,99) and the EAN (in `gtin8`). Pages claim UTF-8 but send cp1252 bytes, so decoding falls back to cp1252.
 - 2026-11-17: krefel.be answered every request (plain HTTP and browser) with a 500 maintenance page; adapter postponed.
 - Amazon sets the delivery country from the visitor's IP. From a Belgian IP (laptop, homelab) both show delivery to Belgium and the matching shipping fee, so no location cookie is needed. A VPN exit abroad would change prices.
 - Amazon finds nothing for some EANs; its search falls back to MPN, then name. An ASIN skips search and opens the product page.
-- Anti-bot: Amazon, bol.com, MediaMarkt, Vandenborre, Krefel and Fnac (likely DataDome, strict) may block plain HTTP or even headless Playwright. Untested; milestone 2 settles it for the first three. Fallback: skip a Shop rather than ship flaky scraping.
+- Anti-bot: Amazon, bol.com, MediaMarkt, Vandenborre, Krefel may block plain HTTP or even headless Playwright. Untested; milestone 2 settles it for the first three. Fallback: skip a Shop rather than ship flaky scraping.
 - Shipping cost is not always on the product page; "unknown" shipping is treated as 0 and shown as such.
 - Shop markup changes will break adapters; the stale flag makes this visible instead of silent.
 - A failed Telegram send is logged, not retried, so that alert is lost (de-dup already counts it as sent).

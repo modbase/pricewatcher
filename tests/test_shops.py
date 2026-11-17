@@ -3,10 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from app.shops import Amazon, FetchError, Hit, Offer, Query, amazon, browser, jsonld, vandenborre
+from app.shops import Amazon, FetchError, Hit, Offer, Query, alternate, amazon, browser, jsonld, vandenborre
 from app.shops.bol import Bol, organic_links
 from app.shops.coolblue import Coolblue
-from app.shops.fnac import Fnac
 from app.shops.vandenborre import Vandenborre
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -89,11 +88,15 @@ def test_vandenborre_search_uses_name_and_follows_exact_match(monkeypatch):
                         "5099206129382")]
 
 
-def test_fnac_product_page_and_hosts():
-    assert jsonld.parse_offer(page("fnac_product")) == Offer(11900, None, True, "0195949688591")
-    assert Fnac().owns("https://www.nl.fnac.be/x/a1") and Fnac().owns("https://www.fr.fnac.be/x/a1")
-    with pytest.raises(RuntimeError, match="paste the product URL"):
-        Fnac().search(Query("airpods"))
+def test_alternate_product_page_with_ean_in_gtin8():
+    assert jsonld.parse_offer(page("alternate_product")) == Offer(8990, 699, True, "5099206129382")
+
+
+def test_alternate_search_cards():
+    assert alternate.parse_search(page("alternate_search"))[0] == Hit(
+        "https://www.alternate.be/Logitech/MX-Master-4-muis/html/product/100162078", "Logitech MX Master 4 muis", 11990,
+        "https://www.alternate.be/p/200x200/8/7/Logitech_MX_Master_4_muis@@100162078.jpg",
+    )
 
 
 def test_amazon_product_reads_buy_box_only():

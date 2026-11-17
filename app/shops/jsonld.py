@@ -59,7 +59,7 @@ def _image(product) -> str | None:
 
 
 def _ean(product) -> str | None:
-    v = product.get("gtin13") or product.get("gtin") or product.get("ean")
+    v = product.get("gtin13") or product.get("gtin") or product.get("ean") or product.get("gtin8")  # Alternate puts the EAN in gtin8
     return str(v) if v else None
 
 
