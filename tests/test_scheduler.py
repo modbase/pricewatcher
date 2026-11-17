@@ -91,3 +91,34 @@ def test_browser_fallback_after_plain_http_fails():
     shop = Plain()
     assert shop.fetch("https://plain.test/p") == Offer(500, 0, True)
     assert shop.used == [False, True]
+
+
+def test_check_now_ignores_due_and_scopes_to_product(tmp_path, monkeypatch):
+    shop, new, fresh = setup(tmp_path, monkeypatch, Offer(1000, 0, True), Offer(950, 0, True))
+    with db.connect() as con:
+        other = con.execute("INSERT INTO product (name) VALUES ('y')").lastrowid
+        con.execute("INSERT INTO listing (product_id, shop, url, last_checked) VALUES (?, 'fake.test', 'u3', ?)",
+                    (other, checks.now()))
+    pid = listing(new)["product_id"]
+    monkeypatch.setitem(SHOPS, "bol.com", shop)  # the fresh Listing's Shop
+    assert scheduler.check_now(pid, pause=(0, 0)) == 2  # fresh one too: a manual check ignores the 6h interval
+    assert sorted(shop.calls) == ["u1", "u2"]
+    assert "u3" not in shop.calls
+
+
+def test_check_now_all_products(tmp_path, monkeypatch):
+    shop, new, fresh = setup(tmp_path, monkeypatch, Offer(1000, 0, True), Offer(950, 0, True))
+    monkeypatch.setitem(SHOPS, "bol.com", shop)
+    assert scheduler.check_now(pause=(0, 0)) == 2
+
+
+def test_check_now_skips_when_already_running(tmp_path, monkeypatch):
+    shop, new, _ = setup(tmp_path, monkeypatch)
+    pid = listing(new)["product_id"]
+    assert scheduler.start_check(pid)
+    assert not scheduler.start_check(pid)  # second click while the first is running
+    assert not scheduler.start_check(None)  # a full check would check this Product too
+    scheduler.end_check(pid)
+    assert scheduler.start_check(None)
+    assert not scheduler.start_check(pid)
+    scheduler.end_check(None)

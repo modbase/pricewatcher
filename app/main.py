@@ -35,7 +35,7 @@ templates.env.globals.update(is_stale=pricing.is_stale, total=pricing.total)
 
 
 @app.get("/")
-def overview(request: Request):
+def overview(request: Request, checking: bool = False):
     with db.connect() as con:
         products = con.execute("SELECT * FROM product ORDER BY name").fetchall()
         by_product = defaultdict(list)
@@ -55,7 +55,7 @@ def overview(request: Request):
             "count": len(listings),
             "last_checked": max((l["last_checked"] for l in listings if l["last_checked"]), default=None),
         })
-    return templates.TemplateResponse(request, "overview.html", {"rows": rows})
+    return templates.TemplateResponse(request, "overview.html", {"rows": rows, "checking": checking})
 
 
 def get_product(con, product_id: int):
@@ -169,6 +169,30 @@ def first_check(listing_id: int, url: str) -> None:
             checks.record_if_current(con, listing_id, url, result)
 
 
+def check_now(product_id: int | None) -> None:
+    """Background task for the Check now buttons; a click while the same check runs is ignored."""
+    if not scheduler.start_check(product_id):
+        return
+    try:
+        scheduler.check_now(product_id)
+    finally:
+        scheduler.end_check(product_id)
+
+
+@app.post("/check")
+def check_all(tasks: BackgroundTasks):
+    tasks.add_task(check_now, None)
+    return RedirectResponse("/?checking=1", status_code=303)
+
+
+@app.post("/products/{product_id}/check")
+def check_product(tasks: BackgroundTasks, product_id: int):
+    with db.connect() as con:
+        get_product(con, product_id)
+    tasks.add_task(check_now, product_id)
+    return RedirectResponse(f"/products/{product_id}?checking=1", status_code=303)
+
+
 @app.post("/products/{product_id}/edit")
 def edit_product(
     product_id: int,
@@ -214,7 +238,7 @@ def delete_product(product_id: int):
 
 
 @app.get("/products/{product_id}")
-def product(request: Request, product_id: int):
+def product(request: Request, product_id: int, checking: bool = False):
     with db.connect() as con:
         p = get_product(con, product_id)
         listings = con.execute(
@@ -239,4 +263,5 @@ def product(request: Request, product_id: int):
         "listings": r + [l for l in listings if l["id"] not in ids],
         "best_id": r[0]["id"] if r else None,
         "history": history,
+        "checking": checking,
     })
