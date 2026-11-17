@@ -34,9 +34,15 @@ database, so they survive restarts and come along when you copy the database.
 
 ## Deploy (Docker)
 
+GitHub Actions runs the tests and builds the image on every push to `main`
+(`ghcr.io/modbase/pricewatcher`, tags `latest` and `sha-<commit>`; a `v1.2.3` git tag also gets `1.2.3`).
+On the server, with `docker-compose.yml` (and `.env`, if any) in the app directory:
+
 ```sh
-docker compose up -d --build
+docker compose pull && docker compose up -d
 ```
+
+To build on the server instead: `docker compose up -d --build`.
 
 The app listens on port 8000 and stores everything in `./data/pricewatcher.db`. Run exactly one container:
 price checks run inside the app process.
