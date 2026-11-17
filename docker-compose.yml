@@ -1,6 +1,7 @@
 services:
   pricewatcher:
-    build: .
+    image: ghcr.io/modbase/pricewatcher:latest  # built by GitHub Actions on every push to main
+    build: .  # only used by `docker compose up --build`
     ports:
       - "8000:8000"
     volumes:
