@@ -30,6 +30,7 @@ def _walk(node):
     elif isinstance(node, dict):
         yield node
         yield from _walk(node.get("@graph", []))
+        yield from _walk(node.get("object", []))  # MediaMarkt: BuyAction -> ProductGroup
         for el in node.get("itemListElement", []):
             yield from _walk(el.get("item", el) if isinstance(el, dict) else el)
 
@@ -43,7 +44,7 @@ def products(html: str) -> list[dict]:
             continue
         for node in _walk(data):
             t = node.get("@type")
-            if t == "Product" or (isinstance(t, list) and "Product" in t):
+            if t in ("Product", "ProductGroup") or (isinstance(t, list) and "Product" in t):
                 out.append(node)
     return out
 

@@ -3,9 +3,10 @@ from pathlib import Path
 
 import pytest
 
-from app.shops import Amazon, FetchError, Offer, amazon, jsonld
+from app.shops import Amazon, FetchError, Hit, Offer, Query, amazon, browser, jsonld, vandenborre
 from app.shops.bol import Bol, organic_links
 from app.shops.coolblue import Coolblue
+from app.shops.vandenborre import Vandenborre
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -53,6 +54,38 @@ def test_coolblue_search_hits():
     hits = [jsonld.to_hit(p, "x") for p in jsonld.products(page("coolblue_search"))]
     assert hits[0].url == "https://www.coolblue.be/nl/product/970149/logitech-mx-master-3s-bluetooth-edition.html"
     assert (hits[0].title, hits[0].price) == ("Logitech MX Master 3S Bluetooth Edition", 6900)
+
+
+def test_mediamarkt_product_page_is_the_productgroup_not_a_variant():
+    assert jsonld.parse_offer(page("mediamarkt_product")) == Offer(6900, 0, True, "5099206129382")
+
+
+def test_mediamarkt_search_hits():
+    hits = [jsonld.to_hit(p, "x") for p in jsonld.products(page("mediamarkt_search"))]
+    assert hits[0].url == "https://www.mediamarkt.be/nl/product/_logitech-mx-master-3s-se-graphite-muis-zwart-2197306.html"
+    assert hits[0].price == 6900
+
+
+def test_vandenborre_product_page():
+    assert jsonld.parse_offer(page("vandenborre_product")) == Offer(6900, 0, True, "5099206129382")
+
+
+def test_vandenborre_search_cards():
+    hits = vandenborre.parse_search(page("vandenborre_search"))
+    assert hits[0] == Hit(
+        "https://www.vandenborre.be/koptelefoon/wh-1000xm5-pink", "SONY WH-1000XM5 PINK", 23400,
+        "https://image.vandenborre.be/WEB/images/products/300/sony_wh-1000xm5-pink_7736517_1.jpg",
+    )
+
+
+def test_vandenborre_search_uses_name_and_follows_exact_match(monkeypatch):
+    urls = []
+    monkeypatch.setattr(browser, "get", lambda url, **kw: (urls.append(url) or url, page("vandenborre_product")))
+    hits = Vandenborre().search(Query("mx master 3s", ean="5099206129382", mpn="910-006559"))
+    assert urls == ["https://www.vandenborre.be/zoekresultaat?query=mx+master+3s"]
+    assert hits == [Hit("https://www.vandenborre.be/muis/mx-master-3s-bt", "LOGITECH MX MASTER 3S BT", 6900,
+                        "https://image.vandenborre.be/WEB/images/products/superzoom/logitech_mx-master-3s-bt_7638744_1.jpg",
+                        "5099206129382")]
 
 
 def test_amazon_product_reads_buy_box_only():
