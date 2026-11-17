@@ -47,9 +47,9 @@ class Shop:
         host = urlparse(url).hostname or ""
         return urlparse(url).scheme in ("http", "https") and (host == self.key or host.endswith("." + self.key))
 
-    def get(self, url: str) -> tuple[str, str]:
-        if self.needs_browser:
-            from . import browser  # Playwright is only imported by Shops that need it
+    def get(self, url: str, use_browser: bool | None = None) -> tuple[str, str]:
+        if self.needs_browser if use_browser is None else use_browser:
+            from . import browser  # Playwright is only imported when a browser is needed
             return browser.get(url)
         return http.get(url)
 
@@ -66,8 +66,14 @@ class Shop:
         return jsonld.parse_offer(html)
 
     def fetch(self, url: str) -> Offer | FetchError:
+        result = self._fetch(url, self.needs_browser)
+        if isinstance(result, FetchError) and not self.needs_browser:
+            result = self._fetch(url, True)  # blocked or empty over plain HTTP: retry once in a real browser
+        return result
+
+    def _fetch(self, url: str, use_browser: bool) -> Offer | FetchError:
         try:
-            _, html = self.get(url)
-        except Exception as e:  # network, HTTP status, decoding: all count as a failed check
+            _, html = self.get(url, use_browser)
+            return self.parse(html)
+        except Exception as e:  # network, HTTP status, decoding, missing Playwright: all count as a failed check
             return FetchError(f"{type(e).__name__}: {e}")
-        return self.parse(html)

@@ -7,7 +7,7 @@ from fastapi import FastAPI, Form, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from . import checks, db, pricing
+from . import checks, db, pricing, scheduler
 from .shops import SHOPS, Offer
 from .shops import Query as SearchQuery
 
@@ -26,7 +26,10 @@ def when(ts) -> str:
 @asynccontextmanager
 async def lifespan(app):
     db.init()
+    thread, stop = scheduler.start()
     yield
+    stop.set()
+    thread.join(timeout=35)  # a running browser check may need its page timeout to finish
 
 
 app = FastAPI(lifespan=lifespan)
