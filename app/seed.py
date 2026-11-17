@@ -13,7 +13,7 @@ PRODUCTS = [
     ]),
     ("Nintendo Switch 2", None, [
         ("mediamarkt.be", 46999, 0, 0, 0, 4),
-        ("fnac.be", 46999, 499, 0, 0, 4),
+        ("alternate.be", 46999, 699, 0, 0, 4),
     ]),
     ("Logitech MX Master 3S", 8000, [
         ("coolblue.be", 9999, 0, 1, 0, 1),

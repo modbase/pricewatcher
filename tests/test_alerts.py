@@ -70,6 +70,16 @@ def test_remove_listing(tmp_path, monkeypatch):
         assert [r[0] for r in con.execute("SELECT id FROM listing")] == [b]
 
 
+def test_edit_product(tmp_path, monkeypatch):
+    pid, *_ = setup(tmp_path, monkeypatch)
+    with TestClient(app) as c:
+        r = c.post(f"/products/{pid}/edit", data={"name": " Kettle 2 ", "ean": "123", "asin": "B0X"})
+        assert "Kettle 2" in r.text and "B0X" in r.text
+        assert c.post(f"/products/{pid}/edit", data={"name": " "}).status_code == 422
+    with db.connect() as con:
+        assert tuple(con.execute("SELECT name, ean, mpn, asin FROM product").fetchone()) == ("Kettle 2", "123", None, "B0X")
+
+
 def test_set_target(tmp_path, monkeypatch):
     pid, *_ = setup(tmp_path, monkeypatch)
     with TestClient(app) as c:
