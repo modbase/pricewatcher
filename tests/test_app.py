@@ -1,8 +1,15 @@
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
 from app import seed
 from app.main import app, eur
 from app.shops import SHOPS, Hit, Offer, Shop
+
+
+def test_templates_have_no_mojibake():
+    for f in Path("app/templates").glob("*.html"):
+        assert "â‚¬" not in f.read_text(encoding="utf-8"), f  # a UTF-8 euro sign decoded as cp1252
 
 
 def test_eur():
