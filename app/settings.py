@@ -3,6 +3,7 @@ import json
 from zoneinfo import ZoneInfo
 
 TZ = ZoneInfo("Europe/Brussels")  # quiet hours are Belgian time
+SORTS = ("manual", "name", "price", "shop")  # overview order
 INTERVALS = (1, 2, 3, 6, 12, 24)  # hours; nothing more frequent, or Shops start blocking
 
 DEFAULTS = {
@@ -12,6 +13,7 @@ DEFAULTS = {
     "low_min_drop_pct": 0,  # how far below the earlier low a new low must be to alert
     "quiet_from": None,  # hour 0-23; no scheduled checks from this hour until quiet_until
     "quiet_until": None,
+    "sort": "manual",
 }
 current = dict(DEFAULTS)
 
@@ -25,6 +27,8 @@ def validate(values: dict) -> dict:
         raise ValueError("Stale after must be 1 to 10 failed checks")
     if not 0 <= v["low_min_drop_pct"] <= 50:
         raise ValueError("Minimum drop must be 0 to 50%")
+    if v["sort"] not in SORTS:
+        raise ValueError(f"Sort must be one of {SORTS}")
     quiet = (v["quiet_from"], v["quiet_until"])
     if quiet != (None, None):
         if None in quiet or not all(0 <= h <= 23 for h in quiet):

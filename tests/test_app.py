@@ -64,3 +64,32 @@ def test_check_now(tmp_path, monkeypatch):
         assert "Checking prices" in c.get(r.headers["location"]).text
         assert c.post("/check", follow_redirects=False).headers["location"] == "/?checking=1"
         assert c.post("/products/999/check").status_code == 404
+
+
+def test_sort_and_manual_order(tmp_path, monkeypatch):
+    monkeypatch.setenv("PRICEWATCHER_DB", str(tmp_path / "test.db"))
+    seed.seed()
+    names = ["Sony", "Nintendo", "Logitech"]
+
+    def order(page):
+        return sorted(names, key=page.index)
+
+    with TestClient(app) as c:
+        assert order(c.get("/").text) == ["Logitech", "Nintendo", "Sony"]  # no manual order yet: by name
+        c.post("/sort", data={"sort": "price"})
+        assert order(c.get("/").text) == ["Logitech", "Sony", "Nintendo"]  # no in-stock offer last
+        c.post("/sort", data={"sort": "shop"})
+        assert order(c.get("/").text) == ["Sony", "Logitech", "Nintendo"]  # amazon.nl, bol.com, none
+        assert c.post("/sort", data={"sort": "nope"}).status_code == 422
+        assert c.post("/order", data={"ids": [2, 1, 3]}).status_code == 204
+        assert order(c.get("/").text) == ["Nintendo", "Sony", "Logitech"]
+    with TestClient(app) as c:  # a restart keeps the sort and the order
+        assert order(c.get("/").text) == ["Nintendo", "Sony", "Logitech"]
+
+
+def test_adds_position_to_old_database(tmp_path, monkeypatch):
+    monkeypatch.setenv("PRICEWATCHER_DB", str(tmp_path / "test.db"))
+    import sqlite3
+    sqlite3.connect(tmp_path / "test.db").execute("CREATE TABLE product (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
+    with TestClient(app) as c:
+        assert c.get("/").status_code == 200
