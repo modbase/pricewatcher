@@ -41,6 +41,12 @@ def test_non_eur_is_an_error():
     assert isinstance(jsonld.parse_offer(html), FetchError)
 
 
+def test_bol_product_group_uses_page_variant():
+    # Page is the 89 cm white variant; the group's lowPrice (35.95) belongs to another size.
+    offer = jsonld.parse_offer(page("bol_variants"))
+    assert (offer.price, offer.ean) == (4045, "8720726169172")
+
+
 def test_bol_search_skips_sponsored():
     links = organic_links(page("bol_search"))
     assert not any("macbook" in u for u in links[:3])
