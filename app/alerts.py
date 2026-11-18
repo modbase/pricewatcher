@@ -39,10 +39,17 @@ def evaluate(con, product_id: int, check_id: int) -> str | None:
     return f"{p['name']}: {pricing.eur(price)} at {best['shop']} ({reason})\n{best['url']}"
 
 
+def telegram() -> tuple[str, str]:
+    """Bot token and chat id; each env var overrides its value from the Settings page."""
+    s = settings.current
+    return (os.environ.get("TELEGRAM_BOT_TOKEN") or s["telegram_token"],
+            os.environ.get("TELEGRAM_CHAT_ID") or s["telegram_chat_id"])
+
+
 def send(text: str) -> bool:
     """Send to Telegram; False when not configured or the send failed."""
     # ponytail: a failed send is logged, not retried; that alert is lost (last_alert_price is already set).
-    token, chat = os.environ.get("TELEGRAM_BOT_TOKEN"), os.environ.get("TELEGRAM_CHAT_ID")
+    token, chat = telegram()
     if not (token and chat):
         log.warning("Telegram not configured, alert not sent: %s", text)
         return False

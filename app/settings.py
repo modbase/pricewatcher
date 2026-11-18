@@ -16,6 +16,8 @@ DEFAULTS = {
     "quiet_until": None,
     "sort": "manual",
     "group_order": [],  # Group names top to bottom; Groups not in it follow by name
+    "telegram_token": "",  # the TELEGRAM_BOT_TOKEN env var wins when set
+    "telegram_chat_id": "",  # the TELEGRAM_CHAT_ID env var wins when set
 }
 current = dict(DEFAULTS)
 
@@ -33,6 +35,9 @@ def validate(values: dict) -> dict:
         raise ValueError(f"Sort must be one of {SORTS}")
     if not (isinstance(v["group_order"], list) and all(isinstance(g, str) for g in v["group_order"])):
         raise ValueError("Group order must be a list of names")
+    if not all(isinstance(v[k], str) for k in ("telegram_token", "telegram_chat_id")):
+        raise ValueError("Telegram token and chat id must be text")
+    v["telegram_token"], v["telegram_chat_id"] = v["telegram_token"].strip(), v["telegram_chat_id"].strip()
     quiet = (v["quiet_from"], v["quiet_until"])
     if quiet != (None, None):
         if None in quiet or not all(0 <= h <= 23 for h in quiet):

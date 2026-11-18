@@ -36,7 +36,7 @@ WorkingDirectory=$APP
 Environment=PRICEWATCHER_DB=$APP/data/pricewatcher.db
 Environment=PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_PATH
 Environment=TZ=${TZ_NAME:-Europe/Brussels}
-# TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID; alerts are off without them.
+# Optional TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID; they override the Settings page.
 EnvironmentFile=-$APP/.env
 # Exactly 1 worker: the scheduler runs in-process, more workers would check everything twice.
 ExecStart=$APP/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1

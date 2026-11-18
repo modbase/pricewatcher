@@ -62,9 +62,12 @@ the host's timezone.
 ## Telegram alerts
 
 Create a bot with [@BotFather](https://t.me/BotFather), send it a message, and find your chat id (for example with
-[@userinfobot](https://t.me/userinfobot)). Then set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in a `.env` file: next
-to `docker-compose.yml` for Docker, or `/opt/pricewatcher/.env` on Proxmox (then `systemctl restart pricewatcher`).
-Without them, alerts are only logged. The Settings page can send a test message.
+[@userinfobot](https://t.me/userinfobot)). Enter the bot token and chat id on the Settings page and send a test
+message from there.
+
+You can also set them as the environment variables `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`, which override the
+Settings page: in a `.env` file next to `docker-compose.yml` for Docker, or in `/opt/pricewatcher/.env` on Proxmox
+(then `systemctl restart pricewatcher`). Without a token and chat id, alerts are only logged.
 
 ## Moving your data
 

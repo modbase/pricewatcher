@@ -107,7 +107,7 @@ def test_settings_page(tmp_path, monkeypatch):
         assert r.headers["location"] == "/settings?saved=1"
         assert settings.current == {"interval_hours": 12, "stale_after": 4, "low_alerts": True,
                                     "low_min_drop_pct": 2, "quiet_from": 1, "quiet_until": 7, "sort": "manual",
-                                    "group_order": []}
+                                    "group_order": [], "telegram_token": "", "telegram_chat_id": ""}
         assert "Settings saved" in c.get(r.headers["location"]).text
         form.pop("low_alerts")  # unchecked box: not sent
         form.update(quiet_from="", quiet_until="")
@@ -116,3 +116,23 @@ def test_settings_page(tmp_path, monkeypatch):
         assert c.post("/settings", data=form | {"interval_hours": "5"}).status_code == 422
         r = c.post("/settings/telegram-test", follow_redirects=False)
         assert r.headers["location"] == "/settings?telegram=failed"
+
+
+def test_telegram_settings_and_env_override(tmp_path, monkeypatch):
+    monkeypatch.setenv("PRICEWATCHER_DB", str(tmp_path / "t.db"))
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+    monkeypatch.delenv("TELEGRAM_CHAT_ID", raising=False)
+    with TestClient(app) as c:
+        c.post("/settings/telegram", data={"token": " 1:secret ", "chat_id": "42"})
+        assert alerts.telegram() == ("1:secret", "42")
+        page = c.get("/settings").text
+        assert "1:secret" not in page and 'value="42"' in page and "not configured" not in page
+        c.post("/settings/telegram", data={"token": "", "chat_id": "43"})  # empty token keeps the saved one
+        assert alerts.telegram() == ("1:secret", "43")
+    with TestClient(app) as c:  # saved values survive a restart
+        assert alerts.telegram() == ("1:secret", "43")
+        monkeypatch.setenv("TELEGRAM_CHAT_ID", "99")
+        assert alerts.telegram() == ("1:secret", "99")
+        assert "Set by <code>TELEGRAM_CHAT_ID</code>" in c.get("/settings").text
+        c.post("/settings/telegram", data={"clear": "true"})
+        assert alerts.telegram() == ("", "99")
