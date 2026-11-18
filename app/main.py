@@ -64,7 +64,13 @@ def overview(request: Request, checking: bool = False):
         rows.sort(key=lambda r: (r["best"] is None, r["best_total"] or 0))
     elif sort == "shop":  # grouped by Cheapest Shop, cheapest first within a shop
         rows.sort(key=lambda r: (r["best"] is None, r["best"]["shop"] if r["best"] else "", r["best_total"] or 0))
-    rows.sort(key=lambda r: (r["product"]["grp"] or "").casefold())  # stable: keeps the sort within a Group; ungrouped first
+    group_pos = {g: i for i, g in enumerate(settings.current["group_order"])}
+
+    def group_key(r):  # ungrouped first, then the dragged Group order, then Groups not in it by name
+        g = r["product"]["grp"]
+        return (0,) if g is None else (1, group_pos.get(g, len(group_pos)), g.casefold())
+
+    rows.sort(key=group_key)  # stable: keeps the sort within a Group
     groups = [(g, list(rs)) for g, rs in groupby(rows, key=lambda r: r["product"]["grp"])]
     return templates.TemplateResponse(request, "overview.html", {
         "rows": rows, "groups": groups, "checking": checking, "sort": sort, "sorts": settings.SORTS,
@@ -82,11 +88,25 @@ def save_sort(sort: Annotated[str, Form()]):
 
 
 @app.post("/order")
-def save_order(ids: Annotated[list[int], Form()]):
-    """Manual order from drag and drop: the product ids top to bottom."""
+def save_order(
+    ids: Annotated[list[int], Form()],
+    moved: Annotated[int | None, Form()] = None,
+    grp: Annotated[str, Form()] = "",
+):
+    """Manual order from drag and drop: the product ids top to bottom, and the Group a dragged product landed in."""
     with db.connect() as con:
         con.executemany("UPDATE product SET position = ? WHERE id = ?", list(enumerate(ids)))
+        if moved is not None:
+            con.execute("UPDATE product SET grp = ? WHERE id = ?", (grp.strip() or None, moved))
         settings.save(con, {**settings.current, "sort": "manual"})
+    return Response(status_code=204)
+
+
+@app.post("/group-order")
+def save_group_order(names: Annotated[list[str], Form()]):
+    """Group order from drag and drop: the Group names top to bottom."""
+    with db.connect() as con:
+        settings.save(con, {**settings.current, "group_order": names})
     return Response(status_code=204)
 
 

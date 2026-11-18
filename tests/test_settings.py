@@ -106,7 +106,8 @@ def test_settings_page(tmp_path, monkeypatch):
         r = c.post("/settings", data=form, follow_redirects=False)
         assert r.headers["location"] == "/settings?saved=1"
         assert settings.current == {"interval_hours": 12, "stale_after": 4, "low_alerts": True,
-                                    "low_min_drop_pct": 2, "quiet_from": 1, "quiet_until": 7, "sort": "manual"}
+                                    "low_min_drop_pct": 2, "quiet_from": 1, "quiet_until": 7, "sort": "manual",
+                                    "group_order": []}
         assert "Settings saved" in c.get(r.headers["location"]).text
         form.pop("low_alerts")  # unchecked box: not sent
         form.update(quiet_from="", quiet_until="")

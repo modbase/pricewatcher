@@ -14,6 +14,7 @@ DEFAULTS = {
     "quiet_from": None,  # hour 0-23; no scheduled checks from this hour until quiet_until
     "quiet_until": None,
     "sort": "manual",
+    "group_order": [],  # Group names top to bottom; Groups not in it follow by name
 }
 current = dict(DEFAULTS)
 
@@ -29,6 +30,8 @@ def validate(values: dict) -> dict:
         raise ValueError("Minimum drop must be 0 to 50%")
     if v["sort"] not in SORTS:
         raise ValueError(f"Sort must be one of {SORTS}")
+    if not (isinstance(v["group_order"], list) and all(isinstance(g, str) for g in v["group_order"])):
+        raise ValueError("Group order must be a list of names")
     quiet = (v["quiet_from"], v["quiet_until"])
     if quiet != (None, None):
         if None in quiet or not all(0 <= h <= 23 for h in quiet):

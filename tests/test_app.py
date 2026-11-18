@@ -96,9 +96,19 @@ def test_groups(tmp_path, monkeypatch):
         page = c.get("/").text
         assert page.count('data-group="Mom"') == 1 and "2 products" in page
         assert page.index("Logitech") < page.index('data-group="Mom"')  # ungrouped first
-        assert '<option value="Mom">' in c.get("/products/3").text
+        assert '>Mom</option>' in c.get("/products/3").text
         c.post("/products/1/edit", data={"name": "Sony", "grp": ""})  # empty clears the Group
         assert "1 product<" in c.get("/").text
+        c.post("/order", data={"ids": [3, 1, 2], "moved": 3, "grp": "Mom"})  # dragged into a Group
+        assert "2 products" in c.get("/").text
+        c.post("/order", data={"ids": [1, 3, 2], "moved": 3, "grp": ""})  # dragged out again
+        assert "1 product<" in c.get("/").text
+        c.post("/products/1/edit", data={"name": "Sony", "grp": "Dad"})
+        page = c.get("/").text
+        assert page.index('data-group="Dad"') < page.index('data-group="Mom"')  # no Group order yet: by name
+        assert c.post("/group-order", data={"names": ["Mom", "Dad"]}).status_code == 204
+        page = c.get("/").text
+        assert page.index("Logitech") < page.index('data-group="Mom"') < page.index('data-group="Dad"')
 
 
 def test_adds_position_to_old_database(tmp_path, monkeypatch):

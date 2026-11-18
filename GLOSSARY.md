@@ -15,7 +15,7 @@ _Avoid_: watch, link
 Finding the Listing of a Product at a Shop from a name, product code or ASIN, and the user confirming it is the right one.
 
 **Group**
-An optional label on a Product (e.g. the person you're watching it for). The overview shows each Group as a collapsible section with its own subtotal; ungrouped Products come first.
+An optional label on a Product (e.g. the person you're watching it for). The overview shows each Group as a collapsible section with its own subtotal; ungrouped Products come first. Drag a Product onto a Group to move it there, or drag a Group header to reorder the Groups.
 
 **Cheapest Shop**
 The Shop whose in-stock, non-stale Listing has the lowest price (including shipping when known) for a Product.
