@@ -324,9 +324,11 @@ def save_telegram(
 
 
 @app.post("/settings/shops")
-def add_shop(domain: Annotated[str, Form()], search_url: Annotated[str, Form()] = ""):
-    custom = settings.current["custom_shops"] + [{"domain": domain, "search_url": search_url}]
+def save_shop(domain: Annotated[str, Form()], search_url: Annotated[str, Form()] = ""):
+    """Adds a custom Shop, or changes its search URL when the domain is already there."""
     try:
+        shop = settings.custom_shop({"domain": domain, "search_url": search_url})
+        custom = [c for c in settings.current["custom_shops"] if c["domain"] != shop["domain"]] + [shop]
         with db.connect() as con:
             settings.save(con, {**settings.current, "custom_shops": custom})
     except ValueError as e:

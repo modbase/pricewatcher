@@ -112,11 +112,14 @@
   {% if s.custom_shops %}
   <ul class="mt-3 divide-y divide-slate-200 dark:divide-slate-800">
     {% for c in s.custom_shops %}
-    <li class="flex items-center gap-3 py-2">
-      <div class="min-w-0 flex-1">
-        <div class="font-medium">{{ c.domain }}</div>
-        <div class="truncate text-xs text-slate-500">{{ c.search_url or "No search: paste product URLs" }}</div>
-      </div>
+    <li class="flex flex-wrap items-center gap-3 py-2">
+      <form method="post" action="/settings/shops" class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+        <input type="hidden" name="domain" value="{{ c.domain }}">
+        <span class="w-28 font-medium">{{ c.domain }}</span>
+        <input name="search_url" value="{{ c.search_url }}" aria-label="Search URL for {{ c.domain }}"
+               placeholder="No search URL: paste product URLs" class="{{ field }} min-w-0 flex-1">
+        <button class="{{ button }}">Save</button>
+      </form>
       <form method="post" action="/settings/shops/delete"
             onsubmit="return confirm('Remove {{ c.domain }}? Its Listings stop being checked and go stale.')">
         <input type="hidden" name="domain" value="{{ c.domain }}">
