@@ -5,6 +5,7 @@ import re
 from . import base
 
 SCRIPT = re.compile(r'<script[^>]*application/ld\+json[^>]*>(.*?)</script>', re.S)
+CANONICAL = re.compile(r'<link[^>]*rel="canonical"[^>]*href="([^"]+)"')
 IN_STOCK = ("InStock", "LimitedAvailability", "OnlineOnly")
 
 
@@ -35,7 +36,17 @@ def _walk(node):
             yield from _walk(el.get("item", el) if isinstance(el, dict) else el)
 
 
+def _variant(group: dict, canonical: str | None) -> dict:
+    """The variant this page is about (bol: a ProductGroup of sizes/colours), else the group itself."""
+    for v in group.get("hasVariant") or []:
+        if canonical and isinstance(v, dict) and str(v.get("url", "")).rstrip("/") == canonical.rstrip("/"):
+            return v
+    return group
+
+
 def products(html: str) -> list[dict]:
+    m = CANONICAL.search(html)
+    canonical = m.group(1) if m else None
     out = []
     for m in SCRIPT.finditer(html):
         try:
@@ -45,7 +56,7 @@ def products(html: str) -> list[dict]:
         for node in _walk(data):
             t = node.get("@type")
             if t in ("Product", "ProductGroup") or (isinstance(t, list) and "Product" in t):
-                out.append(node)
+                out.append(_variant(node, canonical))
     return out
 
 
