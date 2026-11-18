@@ -1,5 +1,7 @@
 # Pricewatcher
 
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/geselle)
+
 **Stop refreshing six webshops before Black Friday.** Pricewatcher is a small self-hosted price tracker for
 Belgian and Dutch webshops. Add the things on your wishlist once, and it checks every shop for you, shows
 where each one is cheapest right now (shipping included), and pings you on Telegram when a price drops below your
