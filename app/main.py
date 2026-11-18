@@ -36,6 +36,24 @@ templates.env.filters.update(eur=eur, when=when)
 templates.env.globals.update(is_stale=pricing.is_stale, total=pricing.total)
 
 
+def price_changes():
+    with db.connect() as con:
+        return con.execute(
+            "SELECT c.*, l.shop, l.product_id, p.name FROM price_change c JOIN listing l ON l.id = c.listing_id"
+            " JOIN product p ON p.id = l.product_id ORDER BY c.id DESC LIMIT 50"
+        ).fetchall()
+
+
+templates.env.globals["price_changes"] = price_changes  # the bell in base.html on every page
+
+
+@app.post("/changes/delete")
+def delete_changes(request: Request, id: Annotated[int | None, Form()] = None):
+    with db.connect() as con:  # no id clears them all
+        con.execute("DELETE FROM price_change WHERE ? IS NULL OR id = ?", (id, id))
+    return RedirectResponse(request.headers.get("referer", "/"), status_code=303)
+
+
 @app.get("/")
 def overview(request: Request, checking: bool = False):
     with db.connect() as con:

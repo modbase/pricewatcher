@@ -11,6 +11,12 @@ def record(con, listing_id: int, result) -> int:
     """Store one check result: an Offer resets the fail count, a FetchError adds one. Returns the check id."""
     ts = now()
     if isinstance(result, Offer):
+        old = con.execute("SELECT last_price FROM listing WHERE id = ?", (listing_id,)).fetchone()[0]
+        if None not in (old, result.price) and old != result.price:
+            con.execute(
+                "INSERT INTO price_change (listing_id, old_price, new_price, changed_at) VALUES (?, ?, ?, ?)",
+                (listing_id, old, result.price, ts),
+            )
         check_id = con.execute(
             "INSERT INTO price_check (listing_id, checked_at, price, shipping, in_stock, ok) VALUES (?, ?, ?, ?, ?, 1)",
             (listing_id, ts, result.price, result.shipping, result.in_stock),
