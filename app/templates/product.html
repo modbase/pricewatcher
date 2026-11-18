@@ -41,7 +41,7 @@
       <p class="mt-1 text-xs text-slate-500">Codes are used when searching; re-match a Shop to use new ones.</p>
     </details>
     <form method="post" action="/products/{{ product.id }}/target" class="mt-2 flex items-center gap-2 text-sm">
-      <label for="target" class="text-slate-500">Target price â‚¬</label>
+      <label for="target" class="text-slate-500">Target price €</label>
       <input id="target" name="target" inputmode="decimal" placeholder="none" size="8"
              value="{{ (product.target_price|eur)[2:] if product.target_price is not none else '' }}"
              class="rounded-lg border border-slate-300 bg-transparent px-2 py-1 tabular-nums dark:border-slate-700">
