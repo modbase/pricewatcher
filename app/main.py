@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import BackgroundTasks, FastAPI, Form, HTTPException, Query, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from . import alerts, checks, db, pricing, scheduler, settings
@@ -38,7 +38,7 @@ templates.env.globals.update(is_stale=pricing.is_stale, total=pricing.total)
 @app.get("/")
 def overview(request: Request, checking: bool = False):
     with db.connect() as con:
-        products = con.execute("SELECT * FROM product ORDER BY name").fetchall()
+        products = con.execute("SELECT * FROM product ORDER BY position IS NULL, position, name").fetchall()
         by_product = defaultdict(list)
         for l in con.execute("SELECT * FROM listing"):
             by_product[l["product_id"]].append(l)
@@ -56,7 +56,35 @@ def overview(request: Request, checking: bool = False):
             "count": len(listings),
             "last_checked": max((l["last_checked"] for l in listings if l["last_checked"]), default=None),
         })
-    return templates.TemplateResponse(request, "overview.html", {"rows": rows, "checking": checking})
+    sort = settings.current["sort"]
+    if sort == "name":
+        rows.sort(key=lambda r: r["product"]["name"].casefold())
+    elif sort == "price":  # no in-stock offer last
+        rows.sort(key=lambda r: (r["best"] is None, r["best_total"] or 0))
+    elif sort == "shop":  # grouped by Cheapest Shop, cheapest first within a shop
+        rows.sort(key=lambda r: (r["best"] is None, r["best"]["shop"] if r["best"] else "", r["best_total"] or 0))
+    return templates.TemplateResponse(
+        request, "overview.html", {"rows": rows, "checking": checking, "sort": sort, "sorts": settings.SORTS}
+    )
+
+
+@app.post("/sort")
+def save_sort(sort: Annotated[str, Form()]):
+    try:
+        with db.connect() as con:
+            settings.save(con, {**settings.current, "sort": sort})
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return RedirectResponse("/", status_code=303)
+
+
+@app.post("/order")
+def save_order(ids: Annotated[list[int], Form()]):
+    """Manual order from drag and drop: the product ids top to bottom."""
+    with db.connect() as con:
+        con.executemany("UPDATE product SET position = ? WHERE id = ?", list(enumerate(ids)))
+        settings.save(con, {**settings.current, "sort": "manual"})
+    return Response(status_code=204)
 
 
 def get_product(con, product_id: int):
@@ -219,6 +247,7 @@ def save_settings(
     quiet_until: Annotated[str, Form()] = "",
 ):
     values = {
+        **settings.current,
         "interval_hours": interval_hours, "stale_after": stale_after, "low_alerts": low_alerts,
         "low_min_drop_pct": low_min_drop_pct, "quiet_from": hour(quiet_from), "quiet_until": hour(quiet_until),
     }

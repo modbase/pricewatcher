@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS product (
     image_url        TEXT,
     target_price     INTEGER,
     last_alert_price INTEGER,
+    position         INTEGER,  -- manual order on the overview; NULL sorts last
     created_at       TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS listing (
@@ -69,4 +70,6 @@ def connect():
 def init():
     with connect() as con:
         con.executescript(SCHEMA)
+        if "position" not in {c["name"] for c in con.execute("PRAGMA table_info(product)")}:
+            con.execute("ALTER TABLE product ADD COLUMN position INTEGER")  # databases made before manual order
         settings.load(con)

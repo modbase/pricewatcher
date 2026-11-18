@@ -3,17 +3,28 @@
 {% if not rows %}
 <p class="text-slate-500">No products yet.</p>
 {% else %}
-<form method="post" action="/check" class="mb-3 flex justify-end">
+<div class="mb-3 flex items-center justify-end gap-2">
+<form method="post" action="/sort">
+  <label class="text-sm text-slate-500">Sort
+    <select name="sort" id="sort" onchange="this.form.submit()" class="ml-1 rounded-lg border border-slate-300 bg-transparent px-2 py-1.5 text-sm text-slate-900 dark:border-slate-700 dark:text-slate-100">
+      {% for s, label in [("manual", "My order (drag to arrange)"), ("name", "Name"), ("price", "Price"), ("shop", "Cheapest Shop")] %}
+      <option value="{{ s }}" {% if s == sort %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+</form>
+<form method="post" action="/check">
   <button class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800" title="Check every Shop of every Product now instead of waiting for the next round">Check all now</button>
 </form>
+</div>
 {% endif %}
-<ul class="space-y-3">
+<ul id="products" class="space-y-3">
   {% for r in rows %}
-  <li>
-    <a href="/products/{{ r.product.id }}"
+  <li draggable="true" data-id="{{ r.product.id }}" class="cursor-grab">
+    <a draggable="false" href="/products/{{ r.product.id }}"
        class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 hover:border-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-600">
       {% if r.product.image_url %}
-      <img src="{{ r.product.image_url }}" alt="" class="size-14 shrink-0 rounded-lg bg-white object-contain">
+      <img draggable="false" src="{{ r.product.image_url }}" alt="" class="size-14 shrink-0 rounded-lg bg-white object-contain">
       {% else %}
       <div class="size-14 shrink-0 rounded-lg bg-slate-100 dark:bg-slate-800"></div>
       {% endif %}
@@ -43,6 +54,28 @@
   </li>
   {% endfor %}
 </ul>
+<script>
+  // Drag and drop sets the manual order; the server saves it and switches the sort to "manual".
+  const list = document.getElementById("products");
+  let dragged = null;
+  list.addEventListener("dragstart", e => { dragged = e.target.closest("li"); dragged.classList.add("opacity-50"); });
+  list.addEventListener("dragover", e => {
+    const over = e.target.closest("li");
+    if (!dragged || !over || over === dragged) return;
+    e.preventDefault();
+    const after = e.clientY > over.getBoundingClientRect().top + over.offsetHeight / 2;
+    after ? over.after(dragged) : over.before(dragged);
+  });
+  list.addEventListener("drop", e => e.preventDefault());
+  list.addEventListener("dragend", async () => {
+    dragged.classList.remove("opacity-50");
+    dragged = null;
+    const body = new URLSearchParams([...list.children].map(li => ["ids", li.dataset.id]));
+    const r = await fetch("/order", {method: "POST", body});
+    if (r.ok) document.getElementById("sort").value = "manual";
+    else alert("Could not save the order");
+  });
+</script>
 {% if rows %}
 {% set priced = rows|selectattr("best")|list %}
 <div class="mt-4 flex items-baseline justify-between gap-4 px-4 text-sm">
