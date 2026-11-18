@@ -18,8 +18,9 @@
 </form>
 </div>
 {% endif %}
-<ul id="products" class="space-y-3">
-  {% for r in rows %}
+{% macro product_list(rs) %}
+<ul class="products space-y-3">
+  {% for r in rs %}
   <li draggable="true" data-id="{{ r.product.id }}" class="group flex items-center gap-1">
     <span class="shrink-0 cursor-grab text-slate-300 group-hover:text-slate-500 dark:text-slate-700 dark:group-hover:text-slate-400" title="Drag to arrange">
       <svg viewBox="0 0 20 20" fill="currentColor" class="size-5" aria-hidden="true">
@@ -59,14 +60,41 @@
   </li>
   {% endfor %}
 </ul>
+{% endmacro %}
+<div id="products" class="space-y-3">
+  {% for name, rs in groups %}
+  {% if name %}
+  {% set priced = rs|selectattr("best")|list %}
+  <details open data-group="{{ name }}">
+    <summary class="flex cursor-pointer items-baseline justify-between gap-4 rounded-lg px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800">
+      <span class="font-semibold">{{ name }} <span class="text-sm font-normal text-slate-500">{{ rs|length }} product{{ "s" if rs|length != 1 }}</span></span>
+      <span class="text-sm tabular-nums text-slate-500">{{ priced|sum(attribute="best_total")|eur }}</span>
+    </summary>
+    <div class="mt-2">{{ product_list(rs) }}</div>
+  </details>
+  {% else %}
+  {{ product_list(rs) }}
+  {% endif %}
+  {% endfor %}
+</div>
 <script>
-  // Drag and drop sets the manual order; the server saves it and switches the sort to "manual".
+  // Remember which Groups are collapsed, in this browser only.
+  const collapsed = new Set(JSON.parse((() => { try { return localStorage.getItem("collapsed") } catch { } })() || "[]"));
+  for (const d of document.querySelectorAll("details[data-group]")) {
+    if (collapsed.has(d.dataset.group)) d.open = false;
+    d.addEventListener("toggle", () => {
+      d.open ? collapsed.delete(d.dataset.group) : collapsed.add(d.dataset.group);
+      try { localStorage.setItem("collapsed", JSON.stringify([...collapsed])) } catch { }
+    });
+  }
+
+  // Drag and drop sets the manual order within a Group; the server saves it and switches the sort to "manual".
   const list = document.getElementById("products");
   let dragged = null;
   list.addEventListener("dragstart", e => { dragged = e.target.closest("li"); dragged.classList.add("opacity-50"); });
   list.addEventListener("dragover", e => {
     const over = e.target.closest("li");
-    if (!dragged || !over || over === dragged) return;
+    if (!dragged || !over || over === dragged || over.parentNode !== dragged.parentNode) return;
     e.preventDefault();
     const after = e.clientY > over.getBoundingClientRect().top + over.offsetHeight / 2;
     after ? over.after(dragged) : over.before(dragged);
@@ -75,7 +103,7 @@
   list.addEventListener("dragend", async () => {
     dragged.classList.remove("opacity-50");
     dragged = null;
-    const body = new URLSearchParams([...list.children].map(li => ["ids", li.dataset.id]));
+    const body = new URLSearchParams([...list.querySelectorAll("li")].map(li => ["ids", li.dataset.id]));
     const r = await fetch("/order", {method: "POST", body});
     if (r.ok) document.getElementById("sort").value = "manual";
     else alert("Could not save the order");

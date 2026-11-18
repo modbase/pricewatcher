@@ -87,6 +87,20 @@ def test_sort_and_manual_order(tmp_path, monkeypatch):
         assert order(c.get("/").text) == ["Nintendo", "Sony", "Logitech"]
 
 
+def test_groups(tmp_path, monkeypatch):
+    monkeypatch.setenv("PRICEWATCHER_DB", str(tmp_path / "test.db"))
+    seed.seed()
+    with TestClient(app) as c:
+        c.post("/products/1/edit", data={"name": "Sony", "grp": " Mom "})
+        c.post("/products/2/edit", data={"name": "Nintendo", "grp": "Mom"})
+        page = c.get("/").text
+        assert page.count('data-group="Mom"') == 1 and "2 products" in page
+        assert page.index("Logitech") < page.index('data-group="Mom"')  # ungrouped first
+        assert '<option value="Mom">' in c.get("/products/3").text
+        c.post("/products/1/edit", data={"name": "Sony", "grp": ""})  # empty clears the Group
+        assert "1 product<" in c.get("/").text
+
+
 def test_adds_position_to_old_database(tmp_path, monkeypatch):
     monkeypatch.setenv("PRICEWATCHER_DB", str(tmp_path / "test.db"))
     import sqlite3

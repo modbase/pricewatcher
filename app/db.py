@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS product (
     target_price     INTEGER,
     last_alert_price INTEGER,
     position         INTEGER,  -- manual order on the overview; NULL sorts last
+    grp              TEXT,     -- Group on the overview; NULL means ungrouped
     created_at       TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS listing (
@@ -70,6 +71,8 @@ def connect():
 def init():
     with connect() as con:
         con.executescript(SCHEMA)
-        if "position" not in {c["name"] for c in con.execute("PRAGMA table_info(product)")}:
-            con.execute("ALTER TABLE product ADD COLUMN position INTEGER")  # databases made before manual order
+        cols = {c["name"] for c in con.execute("PRAGMA table_info(product)")}
+        for col, type_ in [("position", "INTEGER"), ("grp", "TEXT")]:  # databases made before these columns
+            if col not in cols:
+                con.execute(f"ALTER TABLE product ADD COLUMN {col} {type_}")
         settings.load(con)
