@@ -17,21 +17,31 @@
     <details class="mt-1 text-sm">
       <summary class="cursor-pointer text-slate-500 hover:underline">Edit name, codes and Group</summary>
       <form method="post" action="/products/{{ product.id }}/edit" class="mt-2 flex flex-wrap items-end gap-2">
-        {% for field, label in [("name", "Name"), ("ean", "EAN"), ("mpn", "MPN"), ("asin", "ASIN"), ("grp", "Group")] %}
+        {% for field, label in [("name", "Name"), ("ean", "EAN"), ("mpn", "MPN"), ("asin", "ASIN")] %}
         <label class="flex flex-col text-slate-500">{{ label }}
           <input name="{{ field }}" value="{{ product[field] or '' }}" {{ 'required' if field == 'name' }}
-                 {% if field == 'grp' %}list="group-names" placeholder="none"{% endif %}
                  size="{{ 28 if field == 'name' else 14 }}"
                  class="rounded-lg border border-slate-300 bg-transparent px-2 py-1 text-slate-900 dark:border-slate-700 dark:text-slate-100">
         </label>
         {% endfor %}
-        <datalist id="group-names">{% for g in group_names %}<option value="{{ g }}">{% endfor %}</datalist>
+        <label class="flex flex-col text-slate-500">Group
+          {# "New group..." swaps the select for a text box; only the one with a name is submitted #}
+          <select name="grp" class="rounded-lg border border-slate-300 bg-transparent px-2 py-1 text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  onchange="const n = this.nextElementSibling, isNew = this.value === '__new__';
+                            this.name = isNew ? '' : 'grp'; n.name = isNew ? 'grp' : ''; n.hidden = !isNew; this.hidden = isNew; if (isNew) n.focus()">
+            <option value="">No group</option>
+            {% for g in group_names %}<option {% if g == product.grp %}selected{% endif %}>{{ g }}</option>{% endfor %}
+            <option value="__new__">New group…</option>
+          </select>
+          <input hidden placeholder="Group name" size="14"
+                 class="rounded-lg border border-slate-300 bg-transparent px-2 py-1 text-slate-900 dark:border-slate-700 dark:text-slate-100">
+        </label>
         <button class="rounded-lg border border-slate-300 px-3 py-1 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">Save</button>
       </form>
       <p class="mt-1 text-xs text-slate-500">Codes are used when searching; re-match a Shop to use new ones.</p>
     </details>
     <form method="post" action="/products/{{ product.id }}/target" class="mt-2 flex items-center gap-2 text-sm">
-      <label for="target" class="text-slate-500">Target price €</label>
+      <label for="target" class="text-slate-500">Target price â‚¬</label>
       <input id="target" name="target" inputmode="decimal" placeholder="none" size="8"
              value="{{ (product.target_price|eur)[2:] if product.target_price is not none else '' }}"
              class="rounded-lg border border-slate-300 bg-transparent px-2 py-1 tabular-nums dark:border-slate-700">

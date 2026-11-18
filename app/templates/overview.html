@@ -18,15 +18,18 @@
 </form>
 </div>
 {% endif %}
-{% macro product_list(rs) %}
-<ul class="products space-y-3">
-  {% for r in rs %}
-  <li draggable="true" data-id="{{ r.product.id }}" class="group flex items-center gap-1">
+{% macro grip() %}
     <span class="shrink-0 cursor-grab text-slate-300 group-hover:text-slate-500 dark:text-slate-700 dark:group-hover:text-slate-400" title="Drag to arrange">
       <svg viewBox="0 0 20 20" fill="currentColor" class="size-5" aria-hidden="true">
         <circle cx="7" cy="5" r="1.5"/><circle cx="13" cy="5" r="1.5"/><circle cx="7" cy="10" r="1.5"/><circle cx="13" cy="10" r="1.5"/><circle cx="7" cy="15" r="1.5"/><circle cx="13" cy="15" r="1.5"/>
       </svg>
     </span>
+{% endmacro %}
+{% macro product_list(rs, name) %}
+<ul class="space-y-3" data-grp="{{ name or '' }}">
+  {% for r in rs %}
+  <li draggable="true" data-id="{{ r.product.id }}" class="group flex items-center gap-1 [&[hidden]]:hidden">
+    {{ grip() }}
     <a draggable="false" href="/products/{{ r.product.id }}"
        class="flex min-w-0 flex-1 items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 hover:border-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-600">
       {% if r.product.image_url %}
@@ -65,15 +68,16 @@
   {% for name, rs in groups %}
   {% if name %}
   {% set priced = rs|selectattr("best")|list %}
-  <details open data-group="{{ name }}">
-    <summary class="flex cursor-pointer items-baseline justify-between gap-4 rounded-lg px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800">
-      <span class="font-semibold">{{ name }} <span class="text-sm font-normal text-slate-500">{{ rs|length }} product{{ "s" if rs|length != 1 }}</span></span>
+  <details open draggable="true" data-group="{{ name }}">
+    <summary class="group flex cursor-pointer items-center gap-1 rounded-lg py-1 pr-2 hover:bg-slate-100 dark:hover:bg-slate-800">
+      {{ grip() }}
+      <span class="flex-1 font-semibold">{{ name }} <span class="text-sm font-normal text-slate-500">{{ rs|length }} product{{ "s" if rs|length != 1 }}</span></span>
       <span class="text-sm tabular-nums text-slate-500">{{ priced|sum(attribute="best_total")|eur }}</span>
     </summary>
-    <div class="mt-2">{{ product_list(rs) }}</div>
+    <div class="mt-2">{{ product_list(rs, name) }}</div>
   </details>
   {% else %}
-  {{ product_list(rs) }}
+  {{ product_list(rs, name) }}
   {% endif %}
   {% endfor %}
 </div>
@@ -88,25 +92,62 @@
     });
   }
 
-  // Drag and drop sets the manual order within a Group; the server saves it and switches the sort to "manual".
+  // Drag and drop orders Products (within or across Groups) and whole Groups; the server saves it.
+  // While dragging, the item is hidden and a dashed placeholder shows where it will land.
   const list = document.getElementById("products");
-  let dragged = null;
-  list.addEventListener("dragstart", e => { dragged = e.target.closest("li"); dragged.classList.add("opacity-50"); });
-  list.addEventListener("dragover", e => {
-    const over = e.target.closest("li");
-    if (!dragged || !over || over === dragged || over.parentNode !== dragged.parentNode) return;
-    e.preventDefault();
+  let dragged = null, home = null, placeholder = null;
+  const place = (over, e) => {
     const after = e.clientY > over.getBoundingClientRect().top + over.offsetHeight / 2;
-    after ? over.after(dragged) : over.before(dragged);
+    after ? over.after(placeholder) : over.before(placeholder);
+  };
+  list.addEventListener("dragstart", e => {
+    dragged = e.target.closest("li[data-id], details");
+    const isGroup = dragged.tagName === "DETAILS";
+    home = [dragged.parentNode, dragged.nextSibling];
+    placeholder = document.createElement(isGroup ? "div" : "li");
+    placeholder.className = "rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600" + (isGroup ? "" : " ml-6");
+    // a Group's placeholder is header-sized, so an open Group doesn't leave a huge gap
+    placeholder.style.height = (isGroup ? dragged.querySelector("summary") : dragged).offsetHeight + "px";
+    requestAnimationFrame(() => { dragged.after(placeholder); dragged.hidden = true; });  // hiding in dragstart itself cancels the drag
+  });
+  list.addEventListener("dragover", e => {
+    if (!dragged) return;
+    e.preventDefault();  // anywhere in the list is a valid drop
+    if (dragged.tagName === "DETAILS") {
+      const over = e.target.closest("details");
+      if (over && over !== dragged) place(over, e);  // stays below the ungrouped Products, which aren't a details
+      return;
+    }
+    const summary = e.target.closest("summary");
+    if (summary) {  // over a Group header: open it and land at the end of that Group
+      summary.parentNode.open = true;
+      summary.parentNode.querySelector("ul").append(placeholder);
+      return;
+    }
+    const over = e.target.closest("li");
+    if (over && over !== placeholder) place(over, e);
   });
   list.addEventListener("drop", e => e.preventDefault());
-  list.addEventListener("dragend", async () => {
-    dragged.classList.remove("opacity-50");
+  list.addEventListener("dragend", async e => {
+    const d = dragged, cancelled = e.dataTransfer.dropEffect === "none";  // Esc or dropped outside the list
+    const from = home[0].dataset.grp, to = placeholder.parentNode.dataset.grp;
+    cancelled ? home[0].insertBefore(d, home[1]) : placeholder.replaceWith(d);
+    placeholder.remove();
+    d.hidden = false;
     dragged = null;
-    const body = new URLSearchParams([...list.querySelectorAll("li")].map(li => ["ids", li.dataset.id]));
-    const r = await fetch("/order", {method: "POST", body});
-    if (r.ok) document.getElementById("sort").value = "manual";
-    else alert("Could not save the order");
+    if (cancelled) return;
+    let body, r;
+    if (d.tagName === "DETAILS") {
+      body = new URLSearchParams([...list.querySelectorAll("details[data-group]")].map(g => ["names", g.dataset.group]));
+      r = await fetch("/group-order", {method: "POST", body});
+    } else {
+      body = new URLSearchParams([...list.querySelectorAll("li[data-id]")].map(li => ["ids", li.dataset.id]));
+      if (to !== from) body.append("moved", d.dataset.id), body.append("grp", to);
+      r = await fetch("/order", {method: "POST", body});
+      if (r.ok && to !== from) return location.reload();  // Group counts and subtotals changed
+      if (r.ok) document.getElementById("sort").value = "manual";
+    }
+    if (!r.ok) alert("Could not save the order");
   });
 </script>
 {% if rows %}
