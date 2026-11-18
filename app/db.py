@@ -43,6 +43,13 @@ CREATE TABLE IF NOT EXISTS price_check (
     ok         INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS price_check_listing ON price_check (listing_id, checked_at);
+CREATE TABLE IF NOT EXISTS price_change (  -- shown under the bell until dismissed
+    id         INTEGER PRIMARY KEY,
+    listing_id INTEGER NOT NULL REFERENCES listing(id) ON DELETE CASCADE,
+    old_price  INTEGER NOT NULL,
+    new_price  INTEGER NOT NULL,
+    changed_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS setting (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL  -- JSON

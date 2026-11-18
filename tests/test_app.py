@@ -2,7 +2,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from app import seed
+from app import checks, db, seed
 from app.main import app, eur
 from app.shops import SHOPS, Hit, Offer, Shop
 
@@ -124,3 +124,21 @@ def test_adds_position_to_old_database(tmp_path, monkeypatch):
     sqlite3.connect(tmp_path / "test.db").execute("CREATE TABLE product (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
     with TestClient(app) as c:
         assert c.get("/").status_code == 200
+
+
+def test_price_change_bell(tmp_path, monkeypatch):
+    monkeypatch.setenv("PRICEWATCHER_DB", str(tmp_path / "t.db"))
+    with TestClient(app) as c:
+        with db.connect() as con:
+            pid = con.execute("INSERT INTO product (name) VALUES ('Lamp')").lastrowid
+            lid = con.execute("INSERT INTO listing (product_id, shop, url) VALUES (?, 'bol.com', 'u')", (pid,)).lastrowid
+            for price in (1000, 1000, None, 900, 950):  # first price, same, no price shown, two changes
+                checks.record(con, lid, Offer(price, None, price is not None))
+        page = c.get("/").text
+        assert "Price changes (2)" in page and "€ 10,00 &rarr; € 9,00" in page and "€ 9,00 &rarr; € 9,50" in page
+        with db.connect() as con:
+            cid = con.execute("SELECT min(id) FROM price_change").fetchone()[0]
+        c.post("/changes/delete", data={"id": cid})
+        assert "Price changes (1)" in c.get("/").text
+        c.post("/changes/delete")
+        assert "No price changes." in c.get("/").text
