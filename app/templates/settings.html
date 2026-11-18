@@ -63,13 +63,34 @@
 
 <section class="{{ card }} mt-6 text-sm">
   <h2 class="font-medium">Telegram</h2>
-  {% if telegram_configured %}
-  <p class="mt-1 text-slate-500">Configured through <code>TELEGRAM_BOT_TOKEN</code> and <code>TELEGRAM_CHAT_ID</code>.</p>
-  {% else %}
-  <p class="mt-1 text-amber-600 dark:text-amber-400">
-    Telegram is not configured: set <code>TELEGRAM_BOT_TOKEN</code> and <code>TELEGRAM_CHAT_ID</code>. Alerts are only logged until then.
-  </p>
+  {% if not telegram_configured %}
+  <p class="mt-1 text-amber-600 dark:text-amber-400">Telegram is not configured: alerts are only logged until then.</p>
   {% endif %}
+  <p class="mt-1 text-slate-500">
+    Create a bot with <a href="https://t.me/BotFather" class="underline">@BotFather</a> for the token, and send your bot a message.
+    The <code>TELEGRAM_BOT_TOKEN</code> and <code>TELEGRAM_CHAT_ID</code> environment variables override these fields.
+  </p>
+  <form method="post" action="/settings/telegram" class="mt-3 grid gap-3 sm:grid-cols-[auto_1fr] sm:items-center">
+    <label for="tg-token">Bot token</label>
+    {% if env_token %}
+    <p class="text-slate-500">Set by <code>TELEGRAM_BOT_TOKEN</code>.</p>
+    {% else %}
+    <input id="tg-token" type="password" name="token" autocomplete="off" class="{{ field }}"
+           placeholder="{{ 'Saved; type a new one to replace it' if s.telegram_token else '123456789:AA...' }}">
+    {% endif %}
+    <label for="tg-chat">Chat id</label>
+    {% if env_chat %}
+    <p class="text-slate-500">Set by <code>TELEGRAM_CHAT_ID</code>.</p>
+    {% else %}
+    <input id="tg-chat" name="chat_id" value="{{ s.telegram_chat_id }}" inputmode="numeric" class="{{ field }}" placeholder="e.g. 123456789">
+    {% endif %}
+    {% if not (env_token and env_chat) %}
+    <div class="flex gap-2 sm:col-start-2">
+      <button class="{{ button }}">Save Telegram</button>
+      {% if s.telegram_token or s.telegram_chat_id %}<button name="clear" value="true" class="{{ button }}">Remove</button>{% endif %}
+    </div>
+    {% endif %}
+  </form>
   {% if telegram == "sent" %}
   <p class="mt-2 text-emerald-700 dark:text-emerald-400">Test message sent. Check the chat.</p>
   {% elif telegram == "failed" %}

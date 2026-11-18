@@ -271,7 +271,9 @@ def settings_page(request: Request, saved: bool = False, telegram: str = ""):
         "intervals": settings.INTERVALS,
         "saved": saved,
         "telegram": telegram,
-        "telegram_configured": bool(os.environ.get("TELEGRAM_BOT_TOKEN") and os.environ.get("TELEGRAM_CHAT_ID")),
+        "telegram_configured": all(alerts.telegram()),
+        "env_token": bool(os.environ.get("TELEGRAM_BOT_TOKEN")),
+        "env_chat": bool(os.environ.get("TELEGRAM_CHAT_ID")),
     })
 
 
@@ -298,6 +300,22 @@ def save_settings(
             settings.save(con, values)
     except ValueError as e:
         raise HTTPException(422, str(e))
+    return RedirectResponse("/settings?saved=1", status_code=303)
+
+
+@app.post("/settings/telegram")
+def save_telegram(
+    chat_id: Annotated[str, Form()] = "",
+    token: Annotated[str, Form()] = "",  # empty keeps the saved token: the page never shows it
+    clear: Annotated[bool, Form()] = False,
+):
+    values = {**settings.current, "telegram_chat_id": chat_id}
+    if token.strip() or clear:
+        values["telegram_token"] = token
+    if clear:
+        values.update(telegram_token="", telegram_chat_id="")
+    with db.connect() as con:
+        settings.save(con, values)
     return RedirectResponse("/settings?saved=1", status_code=303)
 
 
