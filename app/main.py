@@ -267,6 +267,7 @@ def check_product(tasks: BackgroundTasks, product_id: int):
 def settings_page(request: Request, saved: bool = False, telegram: str = ""):
     return templates.TemplateResponse(request, "settings.html", {
         "s": settings.current,
+        "tz": settings.TZ.key,
         "intervals": settings.INTERVALS,
         "saved": saved,
         "telegram": telegram,

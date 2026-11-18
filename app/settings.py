@@ -1,8 +1,9 @@
 """User settings, stored in the setting table and kept in memory (one process, see scheduler.py)."""
 import json
+import os
 from zoneinfo import ZoneInfo
 
-TZ = ZoneInfo("Europe/Brussels")  # quiet hours are Belgian time
+TZ = ZoneInfo(os.environ.get("TZ", "Europe/Brussels"))  # quiet hours are in this timezone
 SORTS = ("manual", "name", "price", "shop")  # overview order
 INTERVALS = (1, 2, 3, 6, 12, 24)  # hours; nothing more frequent, or Shops start blocking
 
