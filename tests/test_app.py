@@ -159,3 +159,35 @@ def test_price_change_bell(tmp_path, monkeypatch):
         assert "Price changes (1)" in c.get("/").text
         c.post("/changes/delete")
         assert "No price changes." in c.get("/").text
+
+
+def test_archive(tmp_path, monkeypatch):
+    monkeypatch.setenv("PRICEWATCHER_DB", str(tmp_path / "test.db"))
+    seed.seed()
+    with TestClient(app) as c:
+        assert 'id="archived"' not in c.get("/").text
+        r = c.post("/products/1/archive", follow_redirects=False)
+        assert r.headers["location"] == "/products/1"
+        assert "Archived on" in c.get("/products/1").text
+        page = c.get("/").text
+        assert 'data-id="1"' not in page and 'id="archived"' in page and "Sony" in page  # only in the Archived list
+        assert "€ 89,99</span>" in page  # the total leaves out the Archived Product
+        with db.connect() as con:
+            from app import scheduler
+            assert all(l["product_id"] != 1 for l in scheduler.due(con))
+        r = c.post("/products/1/unarchive", data={"next": "/"}, follow_redirects=False)
+        assert r.headers["location"] == "/"
+        page = c.get("/").text
+        assert 'data-id="1"' in page and 'id="archived"' not in page
+        assert c.post("/products/999/archive").status_code == 404
+
+
+def test_delete_asks_in_a_dialog(tmp_path, monkeypatch):
+    monkeypatch.setenv("PRICEWATCHER_DB", str(tmp_path / "test.db"))
+    seed.seed()
+    with TestClient(app) as c:
+        page = c.get("/products/1").text
+        assert 'id="delete-dialog"' in page and "cannot be undone" in page and "Archive instead" in page
+        assert 'id="remove-dialog"' in page and 'data-action="/products/1/listings/' in page
+        c.post("/products/1/delete")
+        assert c.get("/products/1").status_code == 404

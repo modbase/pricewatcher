@@ -17,6 +17,9 @@ Finding the Listing of a Product at a Shop from a name, product code or ASIN, an
 **Group**
 An optional label on a Product (e.g. the person you're watching it for). The overview shows each Group as a collapsible section with its own subtotal; ungrouped Products come first. Drag a Product onto a Group to move it there, or drag a Group header to reorder the Groups.
 
+**Archived Product**
+A Product the user put away without deleting it. It leaves the overview (and its total) for a collapsed Archived list at the bottom, and its Listings are no longer checked, so it sends no alerts. Its Listings and price history stay; unarchiving brings it back where it was. Deleting a Product instead removes it and its history for good.
+
 **Cheapest Shop**
 The Shop whose in-stock, non-stale Listing has the lowest price (including shipping when known) for a Product.
 

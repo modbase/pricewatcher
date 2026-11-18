@@ -64,11 +64,11 @@ def overview(request: Request, checking: bool = False):
         for l in con.execute("SELECT * FROM listing"):
             by_product[l["product_id"]].append(l)
 
-    rows = []
+    rows, archived = [], []
     for p in products:
         listings = by_product[p["id"]]
         r = pricing.ranked(listings)
-        rows.append({
+        (archived if p["archived_at"] else rows).append({
             "product": p,
             "best": r[0] if r else None,
             "best_total": pricing.total(r[0]) if r else None,
@@ -90,10 +90,11 @@ def overview(request: Request, checking: bool = False):
         g = r["product"]["grp"]
         return (0,) if g is None else (1, group_pos.get(g, len(group_pos)), g.casefold())
 
+    archived.sort(key=lambda r: r["product"]["archived_at"], reverse=True)  # most recently Archived first
     rows.sort(key=group_key)  # stable: keeps the sort within a Group
     groups = [(g, list(rs)) for g, rs in groupby(rows, key=lambda r: r["product"]["grp"])]
     return templates.TemplateResponse(request, "overview.html", {
-        "rows": rows, "groups": groups, "checking": checking, "sort": sort, "sorts": settings.SORTS,
+        "rows": rows, "groups": groups, "archived": archived, "checking": checking, "sort": sort, "sorts": settings.SORTS,
     })
 
 
@@ -410,6 +411,25 @@ def delete_listing(product_id: int, listing_id: int):
     with db.connect() as con:
         con.execute("DELETE FROM listing WHERE id = ? AND product_id = ?", (listing_id, product_id))
     return RedirectResponse(f"/products/{product_id}", status_code=303)
+
+
+@app.post("/products/{product_id}/archive")
+def archive_product(product_id: int):
+    """Archived Products leave the overview and are no longer checked; their Listings and history stay."""
+    with db.connect() as con:
+        get_product(con, product_id)
+        con.execute(
+            "UPDATE product SET archived_at = coalesce(archived_at, datetime('now')) WHERE id = ?", (product_id,)
+        )
+    return RedirectResponse(f"/products/{product_id}", status_code=303)
+
+
+@app.post("/products/{product_id}/unarchive")
+def unarchive_product(product_id: int, next: Annotated[str, Form()] = ""):
+    with db.connect() as con:
+        get_product(con, product_id)
+        con.execute("UPDATE product SET archived_at = NULL WHERE id = ?", (product_id,))
+    return RedirectResponse("/" if next == "/" else f"/products/{product_id}", status_code=303)
 
 
 @app.post("/products/{product_id}/delete")
