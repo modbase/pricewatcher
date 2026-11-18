@@ -1,5 +1,6 @@
 import os
 from collections import defaultdict
+from itertools import groupby
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -63,9 +64,11 @@ def overview(request: Request, checking: bool = False):
         rows.sort(key=lambda r: (r["best"] is None, r["best_total"] or 0))
     elif sort == "shop":  # grouped by Cheapest Shop, cheapest first within a shop
         rows.sort(key=lambda r: (r["best"] is None, r["best"]["shop"] if r["best"] else "", r["best_total"] or 0))
-    return templates.TemplateResponse(
-        request, "overview.html", {"rows": rows, "checking": checking, "sort": sort, "sorts": settings.SORTS}
-    )
+    rows.sort(key=lambda r: (r["product"]["grp"] or "").casefold())  # stable: keeps the sort within a Group; ungrouped first
+    groups = [(g, list(rs)) for g, rs in groupby(rows, key=lambda r: r["product"]["grp"])]
+    return templates.TemplateResponse(request, "overview.html", {
+        "rows": rows, "groups": groups, "checking": checking, "sort": sort, "sorts": settings.SORTS,
+    })
 
 
 @app.post("/sort")
@@ -272,14 +275,16 @@ def edit_product(
     ean: Annotated[str, Form()] = "",
     mpn: Annotated[str, Form()] = "",
     asin: Annotated[str, Form()] = "",
+    grp: Annotated[str, Form()] = "",
 ):
     if not name.strip():
         raise HTTPException(422, "Name is required")
     with db.connect() as con:
         get_product(con, product_id)
         con.execute(
-            "UPDATE product SET name = ?, ean = ?, mpn = ?, asin = ? WHERE id = ?",
-            (name.strip(), ean.strip() or None, mpn.strip() or None, asin.strip() or None, product_id),
+            "UPDATE product SET name = ?, ean = ?, mpn = ?, asin = ?, grp = ? WHERE id = ?",
+            (name.strip(), ean.strip() or None, mpn.strip() or None, asin.strip() or None, grp.strip() or None,
+             product_id),
         )
     return RedirectResponse(f"/products/{product_id}", status_code=303)
 
@@ -322,6 +327,7 @@ def product(request: Request, product_id: int, checking: bool = False):
             " WHERE l.product_id = ? AND c.ok AND c.price IS NOT NULL ORDER BY c.checked_at",
             (product_id,),
         ).fetchall()
+        group_names = [g for (g,) in con.execute("SELECT DISTINCT grp FROM product WHERE grp IS NOT NULL ORDER BY grp")]
 
     history = defaultdict(list)  # shop -> [{x: epoch ms (UTC), y: euros}], same total as the table
     for c in points:
@@ -336,4 +342,5 @@ def product(request: Request, product_id: int, checking: bool = False):
         "best_id": r[0]["id"] if r else None,
         "history": history,
         "checking": checking,
+        "group_names": group_names,
     })
