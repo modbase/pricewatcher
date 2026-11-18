@@ -11,10 +11,18 @@
   <header class="border-b border-slate-200 dark:border-slate-800">
     <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
       <a href="/" class="text-lg font-semibold">Pricewatcher</a>
-      <a href="/products/new" class="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-300">Add product</a>
+      <div class="flex items-center gap-2">
+        <a href="/settings" class="rounded-lg px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">Settings</a>
+        <a href="/products/new" class="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-300">Add product</a>
+      </div>
     </div>
   </header>
   <main class="mx-auto max-w-5xl px-4 py-6">
+    {% if checking %}
+    <p class="mb-4 rounded-lg bg-sky-100 px-4 py-2 text-sm text-sky-800 dark:bg-sky-900/50 dark:text-sky-300">
+      Checking prices in the background. Reload in a minute to see the new prices.
+    </p>
+    {% endif %}
     {% block content %}{% endblock %}
   </main>
 </body>

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Settings - Pricewatcher{% endblock %}
+{% block content %}
+{% set field = "rounded-lg border border-slate-300 bg-transparent px-2 py-1 tabular-nums dark:border-slate-700 dark:bg-slate-950" %}
+{% set button = "rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800" %}
+{% set card = "rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900" %}
+<a href="/" class="text-sm text-slate-500 hover:underline">&larr; All products</a>
+<h1 class="mt-3 text-2xl font-semibold">Settings</h1>
+
+{% if saved %}
+<p class="mt-4 rounded-lg bg-emerald-100 px-4 py-2 text-sm text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">Settings saved.</p>
+{% endif %}
+
+<form method="post" action="/settings" class="mt-4 space-y-4 text-sm">
+  <section class="{{ card }} space-y-3">
+    <h2 class="font-medium">Checks</h2>
+    <label class="flex flex-wrap items-center gap-2">
+      <span class="w-40 text-slate-500">Check interval</span>
+      <select name="interval_hours" class="{{ field }}">
+        {% for h in intervals %}
+        <option value="{{ h }}" {{ 'selected' if h == s.interval_hours }}>every {{ h }} hour{{ 's' if h > 1 }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="w-40 text-slate-500">Quiet hours</span>
+      {% for name in ("quiet_from", "quiet_until") %}
+      <select name="{{ name }}" aria-label="{{ 'Quiet from' if loop.first else 'Quiet until' }}" class="{{ field }}">
+        <option value="">off</option>
+        {% for h in range(24) %}
+        <option value="{{ h }}" {{ 'selected' if h == s[name] }}>{{ '%02d' % h }}:00</option>
+        {% endfor %}
+      </select>
+      {% if loop.first %}<span class="text-slate-500">until</span>{% endif %}
+      {% endfor %}
+    </div>
+    <p class="text-xs text-slate-500">
+      Belgian time. No scheduled checks in this window; Check now still works. A round that is already running finishes first.
+    </p>
+    <label class="flex flex-wrap items-center gap-2">
+      <span class="w-40 text-slate-500">Stale after</span>
+      <input type="number" name="stale_after" min="1" max="10" value="{{ s.stale_after }}" class="{{ field }} w-16">
+      <span class="text-slate-500">failed checks in a row</span>
+    </label>
+  </section>
+
+  <section class="{{ card }} space-y-3">
+    <h2 class="font-medium">Alerts</h2>
+    <label class="flex items-center gap-2">
+      <input type="checkbox" name="low_alerts" value="true" {{ 'checked' if s.low_alerts }}>
+      <span>Alert on a new all-time low</span>
+    </label>
+    <label class="flex flex-wrap items-center gap-2">
+      <span class="w-40 text-slate-500">Only when at least</span>
+      <input type="number" name="low_min_drop_pct" min="0" max="50" value="{{ s.low_min_drop_pct }}" class="{{ field }} w-16">
+      <span class="text-slate-500">% below the earlier low (0 = any drop)</span>
+    </label>
+    <p class="text-xs text-slate-500">Target Price alerts are always on.</p>
+  </section>
+
+  <button class="rounded-lg bg-slate-900 px-3 py-1.5 font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-300">Save settings</button>
+</form>
+
+<section class="{{ card }} mt-6 text-sm">
+  <h2 class="font-medium">Telegram</h2>
+  {% if telegram_configured %}
+  <p class="mt-1 text-slate-500">Configured through <code>TELEGRAM_BOT_TOKEN</code> and <code>TELEGRAM_CHAT_ID</code>.</p>
+  {% else %}
+  <p class="mt-1 text-amber-600 dark:text-amber-400">
+    Telegram is not configured: set <code>TELEGRAM_BOT_TOKEN</code> and <code>TELEGRAM_CHAT_ID</code>. Alerts are only logged until then.
+  </p>
+  {% endif %}
+  {% if telegram == "sent" %}
+  <p class="mt-2 text-emerald-700 dark:text-emerald-400">Test message sent. Check the chat.</p>
+  {% elif telegram == "failed" %}
+  <p class="mt-2 text-red-600 dark:text-red-400">The test message was not sent. The app log has the reason.</p>
+  {% endif %}
+  <form method="post" action="/settings/telegram-test" class="mt-3">
+    <button class="{{ button }}">Send test message</button>
+  </form>
+</section>
+{% endblock %}

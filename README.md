@@ -18,16 +18,31 @@ Open http://127.0.0.1:8000. The database is `data/pricewatcher.db` (override wit
 
 Tests: `.venv/Scripts/python -m pytest -q` (no network; Shop pages are saved fixtures).
 
+Prices are rechecked once per check interval (6 hours unless changed on the Settings page). To check right away, use **Check now** on a Product's page
+or **Check all now** on the overview; the check runs in the background, so reload the page after a minute.
+
 ## Telegram alerts
 
 Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` (in Docker: a `.env` file next to `docker-compose.yml`).
-Without them, alerts are only logged.
+Without them, alerts are only logged. The Settings page can send a test message.
+
+## Settings
+
+The Settings page (top right) sets the check interval, quiet hours without scheduled checks (Belgian time),
+how many failed checks make a Listing stale, and whether and when all-time-low alerts fire. They are stored in the
+database, so they survive restarts and come along when you copy the database.
 
 ## Deploy (Docker)
 
+GitHub Actions runs the tests and builds the image on every push to `main`
+(`ghcr.io/modbase/pricewatcher`, tags `latest` and `sha-<commit>`; a `v1.2.3` git tag also gets `1.2.3`).
+On the server, with `docker-compose.yml` (and `.env`, if any) in the app directory:
+
 ```sh
-docker compose up -d --build
+docker compose pull && docker compose up -d
 ```
+
+To build on the server instead: `docker compose up -d --build`.
 
 The app listens on port 8000 and stores everything in `./data/pricewatcher.db`. Run exactly one container:
 price checks run inside the app process.

@@ -51,3 +51,16 @@ def test_add_flow(tmp_path, monkeypatch):
         assert "€ 10,00" in c.get("/").text
         c.post("/products/1/delete")
         assert "No products yet" in c.get("/").text
+
+
+def test_check_now(tmp_path, monkeypatch):
+    monkeypatch.setenv("PRICEWATCHER_DB", str(tmp_path / "test.db"))
+    monkeypatch.setitem(SHOPS, "fake.be", FakeShop())
+    with TestClient(app) as c:
+        c.post("/products", data={"name": "Thing"})
+        c.post("/products/1/listings", data={"shop": "fake.be", "url": "https://www.fake.be/p/9"})
+        r = c.post("/products/1/check", follow_redirects=False)
+        assert r.headers["location"] == "/products/1?checking=1"
+        assert "Checking prices" in c.get(r.headers["location"]).text
+        assert c.post("/check", follow_redirects=False).headers["location"] == "/?checking=1"
+        assert c.post("/products/999/check").status_code == 404
