@@ -3,6 +3,15 @@
 {% block content %}
 <a href="/" class="text-sm text-slate-500 hover:underline">&larr; All products</a>
 
+{% if product.archived_at %}
+<div class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-100 px-4 py-2 text-sm text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">
+  <span>Archived on {{ product.archived_at[:10] }}. It is hidden from the overview and its prices are not checked.</span>
+  <form method="post" action="/products/{{ product.id }}/unarchive">
+    <button class="rounded-lg bg-amber-900 px-3 py-1 font-medium text-white hover:bg-amber-800 dark:bg-amber-200 dark:text-amber-950 dark:hover:bg-amber-100">Unarchive</button>
+  </form>
+</div>
+{% endif %}
+
 <div class="mt-3 flex items-start gap-4">
   {% if product.image_url %}
   <img src="{{ product.image_url }}" alt="" class="size-20 shrink-0 rounded-lg bg-white object-contain">
@@ -48,18 +57,55 @@
       <button class="rounded-lg border border-slate-300 px-3 py-1 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">Save</button>
     </form>
   </div>
-  <div class="ml-auto flex shrink-0 items-center gap-2">
-    {% if listings %}
+  <div class="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">
+    {% if listings and not product.archived_at %}
     <form method="post" action="/products/{{ product.id }}/check">
       <button class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800" title="Check every Shop of this Product now">Check now</button>
     </form>
     {% endif %}
     <a href="/products/{{ product.id }}/match" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">Add shops</a>
-    <form method="post" action="/products/{{ product.id }}/delete" onsubmit="return confirm('Delete this product and its price history?')">
-      <button class="rounded-lg px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950">Delete</button>
+    {% if not product.archived_at %}
+    <form method="post" action="/products/{{ product.id }}/archive">
+      <button class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800" title="Hide from the overview and stop checking prices; keeps the price history">Archive</button>
     </form>
+    {% endif %}
+    <button type="button" onclick="document.getElementById('delete-dialog').showModal()"
+            class="rounded-lg px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950">Delete</button>
   </div>
 </div>
+
+<dialog id="delete-dialog" aria-labelledby="delete-title" aria-describedby="delete-body"
+        onclick="if (event.target === this) this.close()"
+        class="m-auto w-[28rem] max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-slate-950/60 backdrop:backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
+  <div class="flex gap-4 p-6">
+    <div class="flex size-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400">
+      <svg class="size-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+    </div>
+    <div class="min-w-0">
+      <h2 id="delete-title" class="text-lg font-semibold">Delete this product?</h2>
+      <div id="delete-body" class="mt-2 space-y-2 text-sm text-slate-600 dark:text-slate-400">
+        <p><span class="font-medium text-slate-900 dark:text-slate-100">{{ product.name }}</span> will be deleted permanently,
+          together with its {{ listings|length }} shop{{ "s" if listings|length != 1 }} and all of its price history.</p>
+        <p class="font-medium text-red-600 dark:text-red-400">This cannot be undone.</p>
+        {% if not product.archived_at %}
+        <p>Just want it out of sight? Archive it instead: it stops being checked but keeps its history, and you can bring it back later.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="flex flex-wrap justify-end gap-2 rounded-b-2xl border-t border-slate-200 bg-slate-50 px-6 py-4 dark:border-slate-800 dark:bg-slate-950">
+    <button type="button" autofocus onclick="this.closest('dialog').close()"
+            class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800">Cancel</button>
+    {% if not product.archived_at %}
+    <form method="post" action="/products/{{ product.id }}/archive">
+      <button class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800">Archive instead</button>
+    </form>
+    {% endif %}
+    <form method="post" action="/products/{{ product.id }}/delete">
+      <button class="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-500">Delete permanently</button>
+    </form>
+  </div>
+</dialog>
 
 <div class="mt-6 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
   <table class="w-full text-sm">

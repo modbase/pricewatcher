@@ -17,7 +17,9 @@ log = logging.getLogger(__name__)
 def due(con) -> list:
     cutoff = (datetime.now(UTC) - timedelta(hours=settings.current["interval_hours"])).strftime("%Y-%m-%d %H:%M:%S")
     return con.execute(
-        "SELECT * FROM listing WHERE last_checked IS NULL OR last_checked <= ? ORDER BY last_checked", (cutoff,)
+        "SELECT l.* FROM listing l JOIN product p ON p.id = l.product_id"
+        " WHERE p.archived_at IS NULL AND (l.last_checked IS NULL OR l.last_checked <= ?) ORDER BY l.last_checked",
+        (cutoff,),
     ).fetchall()
 
 
@@ -84,14 +86,17 @@ def end_check(product_id: int | None) -> None:
 
 
 def check_now(product_id: int | None = None, pause: tuple[float, float] = (2, 6)) -> int:
-    """Check one Product's Listings (or every Listing) now, due or not; returns how many were checked.
+    """Check one Product's Listings (or every Listing of the Products not Archived) now, due or not;
+    returns how many were checked.
 
     A Product's Listings are on different Shops, so the pause mostly matters when checking all Products.
     May overlap with a scheduler round; each Listing check is its own transaction, so that is safe.
     """
     with db.connect() as con:
         listings = con.execute(
-            "SELECT * FROM listing WHERE ? IS NULL OR product_id = ? ORDER BY product_id, shop", (product_id, product_id)
+            "SELECT l.* FROM listing l JOIN product p ON p.id = l.product_id"
+            " WHERE (? IS NULL AND p.archived_at IS NULL) OR l.product_id = ? ORDER BY l.product_id, l.shop",
+            (product_id, product_id),
         ).fetchall()
     return run(listings, threading.Event(), pause)
 
