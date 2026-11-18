@@ -107,7 +107,8 @@ def test_settings_page(tmp_path, monkeypatch):
         assert r.headers["location"] == "/settings?saved=1"
         assert settings.current == {"interval_hours": 12, "stale_after": 4, "low_alerts": True,
                                     "low_min_drop_pct": 2, "quiet_from": 1, "quiet_until": 7, "sort": "manual",
-                                    "group_order": [], "telegram_token": "", "telegram_chat_id": ""}
+                                    "group_order": [], "telegram_token": "", "telegram_chat_id": "",
+                                    "custom_shops": []}
         assert "Settings saved" in c.get(r.headers["location"]).text
         form.pop("low_alerts")  # unchecked box: not sent
         form.update(quiet_from="", quiet_until="")
@@ -136,3 +137,30 @@ def test_telegram_settings_and_env_override(tmp_path, monkeypatch):
         assert "Set by <code>TELEGRAM_CHAT_ID</code>" in c.get("/settings").text
         c.post("/settings/telegram", data={"clear": "true"})
         assert alerts.telegram() == ("", "99")
+
+
+def test_custom_shops_added_and_removed_on_the_settings_page(tmp_path, monkeypatch):
+    monkeypatch.setenv("PRICEWATCHER_DB", str(tmp_path / "t.db"))
+    with TestClient(app) as c:
+        c.post("/settings/shops", data={"domain": "https://www.Krefel.be/nl", "search_url": "https://www.krefel.be/s?q={query}"})
+        assert SHOPS["krefel.be"].owns("https://www.krefel.be/nl/p/123")
+        assert "krefel.be" in c.get("/settings").text
+        r = c.post("/settings/shops", data={"domain": "coolblue.be"}, follow_redirects=False)
+        assert "already+a+built-in" in r.headers["location"]
+        c.post("/settings/shops", data={"domain": "krefel.be"})  # added twice: rejected
+        assert len(settings.current["custom_shops"]) == 1
+    settings.current.update(settings.DEFAULTS)  # as after a restart
+    db.init()
+    assert "krefel.be" in SHOPS
+    with TestClient(app) as c:
+        c.post("/settings/shops/delete", data={"domain": "krefel.be"})
+    assert "krefel.be" not in SHOPS and "coolblue.be" in SHOPS
+
+
+@pytest.mark.parametrize("entry", [
+    {"domain": "localhost"}, {"domain": "x.be", "search_url": "https://x.be/s?q="},
+    {"domain": "x.be", "search_url": "ftp://x.be/{query}"},
+])
+def test_invalid_custom_shop_rejected(entry):
+    with pytest.raises(ValueError):
+        settings.custom_shop(entry)

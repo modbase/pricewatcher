@@ -100,4 +100,42 @@
     <button class="{{ button }}">Send test message</button>
   </form>
 </section>
+
+<section id="shops" class="{{ card }} mt-6 text-sm">
+  <h2 class="font-medium">Shops</h2>
+  <p class="mt-1 text-slate-500">
+    Built in: {{ builtin_shops|join(", ") }}. You can add any other Shop whose product pages carry schema.org JSON-LD
+    (most do). Try it by Matching a product: if a pasted product URL gives "No product found on that page", the Shop
+    needs its own adapter in code.
+  </p>
+  {% if shop_error %}<p class="mt-2 text-red-600 dark:text-red-400">{{ shop_error }}</p>{% endif %}
+  {% if s.custom_shops %}
+  <ul class="mt-3 divide-y divide-slate-200 dark:divide-slate-800">
+    {% for c in s.custom_shops %}
+    <li class="flex items-center gap-3 py-2">
+      <div class="min-w-0 flex-1">
+        <div class="font-medium">{{ c.domain }}</div>
+        <div class="truncate text-xs text-slate-500">{{ c.search_url or "No search: paste product URLs" }}</div>
+      </div>
+      <form method="post" action="/settings/shops/delete"
+            onsubmit="return confirm('Remove {{ c.domain }}? Its Listings stop being checked and go stale.')">
+        <input type="hidden" name="domain" value="{{ c.domain }}">
+        <button class="{{ button }}">Remove</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <form method="post" action="/settings/shops" class="mt-3 grid gap-3 sm:grid-cols-[auto_1fr] sm:items-center">
+    <label for="shop-domain">Domain</label>
+    <input id="shop-domain" name="domain" required class="{{ field }}" placeholder="e.g. krefel.be">
+    <label for="shop-search">Search URL</label>
+    <input id="shop-search" name="search_url" class="{{ field }}" placeholder="optional, e.g. https://www.krefel.be/nl/zoeken?q={query}">
+    <p class="text-xs text-slate-500 sm:col-start-2">
+      Search for something on the Shop and copy the result page's URL, with the search words replaced by <code>{query}</code>.
+      Search only works when the result page itself carries JSON-LD; without it, paste product URLs when Matching.
+    </p>
+    <div class="sm:col-start-2"><button class="{{ button }}">Add Shop</button></div>
+  </form>
+</section>
 {% endblock %}

@@ -1,11 +1,16 @@
 """User settings, stored in the setting table and kept in memory (one process, see scheduler.py)."""
 import json
 import os
+import re
+from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
+
+from . import shops
 
 TZ = ZoneInfo(os.environ.get("TZ", "Europe/Brussels"))  # quiet hours are in this timezone
 SORTS = ("manual", "name", "price", "shop")  # overview order
 INTERVALS = (1, 2, 3, 6, 12, 24)  # hours; nothing more frequent, or Shops start blocking
+DOMAIN = re.compile(r"[a-z0-9-]+(\.[a-z0-9-]+)+")
 
 DEFAULTS = {
     "interval_hours": 6,
@@ -18,6 +23,7 @@ DEFAULTS = {
     "group_order": [],  # Group names top to bottom; Groups not in it follow by name
     "telegram_token": "",  # the TELEGRAM_BOT_TOKEN env var wins when set
     "telegram_chat_id": "",  # the TELEGRAM_CHAT_ID env var wins when set
+    "custom_shops": [],  # [{"domain": "example.be", "search_url": "https://...{query}..." or ""}]
 }
 current = dict(DEFAULTS)
 
@@ -38,6 +44,10 @@ def validate(values: dict) -> dict:
     if not all(isinstance(v[k], str) for k in ("telegram_token", "telegram_chat_id")):
         raise ValueError("Telegram token and chat id must be text")
     v["telegram_token"], v["telegram_chat_id"] = v["telegram_token"].strip(), v["telegram_chat_id"].strip()
+    v["custom_shops"] = [custom_shop(c) for c in v["custom_shops"]]
+    domains = [c["domain"] for c in v["custom_shops"]]
+    if len(set(domains)) != len(domains):
+        raise ValueError("Each Shop can be added once")
     quiet = (v["quiet_from"], v["quiet_until"])
     if quiet != (None, None):
         if None in quiet or not all(0 <= h <= 23 for h in quiet):
@@ -48,12 +58,27 @@ def validate(values: dict) -> dict:
     return v
 
 
+def custom_shop(c: dict) -> dict:
+    """A custom Shop entry with its domain normalised; accepts a URL as the domain."""
+    raw = str(c.get("domain", "")).strip().lower()
+    domain = (urlparse(raw if "//" in raw else "//" + raw).hostname or "").removeprefix("www.")
+    if not DOMAIN.fullmatch(domain):
+        raise ValueError(f"Not a shop domain: {raw!r}")
+    if domain in shops.BUILTIN:
+        raise ValueError(f"{domain} is already a built-in Shop")
+    search_url = str(c.get("search_url", "")).strip()
+    if search_url and not (search_url.startswith(("https://", "http://")) and "{query}" in search_url):
+        raise ValueError("The search URL must start with https:// and contain {query}")
+    return {"domain": domain, "search_url": search_url}
+
+
 def load(con) -> None:
     current.clear()
     current.update(DEFAULTS)
     for key, value in con.execute("SELECT key, value FROM setting"):
         if key in DEFAULTS:
             current[key] = json.loads(value)
+    shops.sync(current["custom_shops"])
 
 
 def save(con, values: dict) -> None:
@@ -63,3 +88,4 @@ def save(con, values: dict) -> None:
         [(k, json.dumps(x)) for k, x in v.items()],
     )
     current.update(v)
+    shops.sync(v["custom_shops"])

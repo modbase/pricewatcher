@@ -9,7 +9,8 @@ need no network, and CI runs them on every pull request.
 
 ## Adding a Shop
 
-One adapter per Shop in `app/shops/`, registered in `SHOPS` in `app/shops/__init__.py`. Start from a small one such
+A Shop whose pages carry schema.org JSON-LD needs no code: add it under Settings > Shops (`app/shops/custom.py`).
+Shops that need their own parsing get one adapter in `app/shops/`, registered in `BUILTIN` in `app/shops/__init__.py`. Start from a small one such
 as `coolblue.py`:
 
 - Subclass `Shop` (`app/shops/base.py`) and set `key` to the Shop's domain (e.g. `coolblue.be`).

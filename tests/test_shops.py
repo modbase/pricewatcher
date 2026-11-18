@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from app.shops import Amazon, FetchError, Hit, Offer, Query, alternate, amazon, browser, jsonld, vandenborre
+from app.shops import Amazon, CustomShop, FetchError, Hit, Offer, Query, alternate, amazon, browser, http, jsonld, vandenborre
 from app.shops.bol import Bol, organic_links
 from app.shops.coolblue import Coolblue
 from app.shops.vandenborre import Vandenborre
@@ -136,3 +136,12 @@ def test_amazon_search_skips_ads():
 ])
 def test_owns(shop, url, ok):
     assert shop.owns(url) is ok
+
+
+def test_custom_shop_search_reads_jsonld(monkeypatch):
+    urls = []
+    monkeypatch.setattr(http, "get", lambda url: (urls.append(url) or url, page("coolblue_search")))
+    hits = CustomShop("example.be", "https://example.be/zoeken?q={query}").search(Query("mx master 3s"))
+    assert urls == ["https://example.be/zoeken?q=mx+master+3s"]
+    assert hits[0].title == "Logitech MX Master 3S Bluetooth Edition"
+    assert CustomShop("example.be").search(Query("x")) == []  # no search URL: paste product URLs

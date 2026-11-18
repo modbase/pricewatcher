@@ -14,7 +14,7 @@ One row per Product, cheapest Shop shown, click through for all Shop prices. Ter
   - New all-time low: the Cheapest price is lower than any Cheapest price recorded for that Product before. Fires with or without a Target Price, but never on the Product's first successful check. Settings can turn it off, or require a minimum drop in % below the earlier low.
   - De-dup: an alert fires only when the Cheapest price is below `product.last_alert_price` (or none is stored yet); sending sets it. A price rise does not reset it, so bouncing prices don't re-alert.
   - Only background checks alert; the check made while Matching a Shop does not (you are looking at that price already).
-- Shops: amazon.nl, amazon.com.be, bol.com, coolblue.be, mediamarkt.be, vandenborre.be, krefel.be, alternate.be. One code adapter per Shop. fnac.be was dropped (2026-11-17): its search is behind a captcha.
+- Shops: amazon.nl, amazon.com.be, bol.com, coolblue.be, mediamarkt.be, vandenborre.be, krefel.be, alternate.be. One code adapter per Shop; Shops with JSON-LD can also be added on the Settings page. fnac.be was dropped (2026-11-17): its search is behind a captcha.
 
 ## Data model (SQLite)
 
