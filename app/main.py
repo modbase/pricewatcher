@@ -276,8 +276,11 @@ def check_product(tasks: BackgroundTasks, product_id: int):
 
 @app.get("/settings")
 def settings_page(request: Request, saved: bool = False, telegram: str = "", shop_error: str = ""):
+    with db.connect() as con:
+        group_names = [g for (g,) in con.execute("SELECT DISTINCT grp FROM product WHERE grp IS NOT NULL ORDER BY grp")]
     return templates.TemplateResponse(request, "settings.html", {
         "s": settings.current,
+        "group_names": group_names,
         "shop_error": shop_error,
         "builtin_shops": list(BUILTIN),
         "tz": settings.TZ.key,
@@ -351,6 +354,17 @@ def delete_shop(domain: Annotated[str, Form()]):
     with db.connect() as con:
         settings.save(con, {**settings.current, "custom_shops": custom})
     return RedirectResponse("/settings?saved=1#shops", status_code=303)
+
+
+@app.post("/settings/groups")
+def rename_group(old: Annotated[str, Form()], new: Annotated[str, Form()] = ""):
+    """Renames a Group; an existing name merges the two, an empty name ungroups its products."""
+    new = new.strip() or None
+    order = [new if g == old else g for g in settings.current["group_order"] if new or g != old]
+    with db.connect() as con:
+        con.execute("UPDATE product SET grp = ? WHERE grp = ?", (new, old))
+        settings.save(con, {**settings.current, "group_order": list(dict.fromkeys(order))})  # a merge keeps one entry
+    return RedirectResponse("/settings?saved=1#groups", status_code=303)
 
 
 @app.post("/settings/telegram-test")

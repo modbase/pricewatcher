@@ -125,6 +125,14 @@ def test_groups(tmp_path, monkeypatch):
         assert c.post("/group-order", data={"names": ["Mom", "Dad"]}).status_code == 204
         page = c.get("/").text
         assert page.index("Logitech") < page.index('data-group="Mom"') < page.index('data-group="Dad"')
+        assert 'value="Mom"' in c.get("/settings").text
+        c.post("/settings/groups", data={"old": "Mom", "new": " Mum "})  # rename keeps its place in the order
+        page = c.get("/").text
+        assert 'data-group="Mom"' not in page and page.index('data-group="Mum"') < page.index('data-group="Dad"')
+        c.post("/settings/groups", data={"old": "Dad", "new": "Mum"})  # rename onto an existing Group merges
+        assert c.get("/").text.count("data-group=") == 1 and "2 products" in c.get("/").text
+        c.post("/settings/groups", data={"old": "Mum", "new": ""})  # empty ungroups
+        assert 'data-group="Mum"' not in c.get("/").text
 
 
 def test_adds_position_to_old_database(tmp_path, monkeypatch):
