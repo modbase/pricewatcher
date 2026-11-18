@@ -149,6 +149,10 @@ def test_custom_shops_added_and_removed_on_the_settings_page(tmp_path, monkeypat
         assert "already+a+built-in" in r.headers["location"]
         c.post("/settings/shops", data={"domain": "krefel.be"})  # added twice: rejected
         assert len(settings.current["custom_shops"]) == 1
+        c.post("/settings/shops", data={"domain": "fnac.be"})  # no search URL
+        c.post("/products", data={"name": "Thing"})
+        assert "has no search URL" in c.get("/products/1/match/fnac.be").text
+        c.post("/settings/shops/delete", data={"domain": "fnac.be"})
     settings.current.update(settings.DEFAULTS)  # as after a restart
     db.init()
     assert "krefel.be" in SHOPS

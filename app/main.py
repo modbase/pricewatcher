@@ -188,8 +188,9 @@ def match_shop(request: Request, product_id: int, shop: str):
     except Exception as e:  # shown to the user, who can still paste a URL
         error = f"{type(e).__name__}: {e}"
     hits.sort(key=lambda h: not code_match(p, h))  # EAN/ASIN match first
+    no_search = getattr(SHOPS[shop], "search_url", None) == ""  # a custom Shop added without a search URL
     return templates.TemplateResponse(
-        request, "_match_shop.html", {"product": p, "shop": shop, "hits": hits, "error": error}
+        request, "_match_shop.html", {"product": p, "shop": shop, "hits": hits, "error": error, "no_search": no_search}
     )
 
 
