@@ -6,6 +6,8 @@ services:
       - "8000:8000"
     volumes:
       - ./data:/data  # holds pricewatcher.db; copy your existing DB here before the first start
+    environment:
+      - TZ=Europe/Brussels  # timezone for the quiet hours
     env_file:
       - path: .env  # TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID; alerts are off without it
         required: false
