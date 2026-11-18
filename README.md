@@ -30,13 +30,14 @@ Run this in a shell on the Proxmox host:
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/modbase/pricewatcher/main/proxmox/pricewatcher.sh)"
 ```
 
-It creates an unprivileged Debian 13 container (2 cores, 2 GB RAM, 8 GB disk, DHCP on `vmbr0`), installs
-Pricewatcher as a systemd service, and prints its URL. Change the defaults with variables in front of the command,
-for example `CTID=150 STORAGE=local-zfs VLAN=50 bash -c "$(curl ...)"`; see the top of
+It asks whether to use the default settings (an unprivileged Debian 13 container with 2 cores, 2 GB RAM, 8 GB
+disk, DHCP on `vmbr0`) or to change them under Advanced, then installs Pricewatcher as a systemd service and prints
+its URL. Without a terminal it skips the questions; variables in front of the command set the defaults either way,
+for example `CTID=150 STORAGE=local-zfs VLAN=50 bash -c "$(curl ...)"`. See the top of
 [`proxmox/pricewatcher.sh`](proxmox/pricewatcher.sh) for all of them.
 
-To update, run the same command with `CTID` set to the existing container. Your data in
-`/opt/pricewatcher/data` and your `/opt/pricewatcher/.env` are kept.
+To update, run `update` in the container's console, or run the install command again with `CTID` set to the
+existing container. Your data in `/opt/pricewatcher/data` and your `/opt/pricewatcher/.env` are kept.
 
 ## Install with Docker Compose
 
