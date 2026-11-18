@@ -21,7 +21,8 @@
       <button class="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium {{ 'bg-emerald-600 text-white hover:bg-emerald-500' if ean_match else 'border border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800' }}">Pick</button>
     </form>
     {% else %}
-    {% if not error %}<p class="text-sm text-slate-500">No hits.</p>{% endif %}
+    {% if no_search %}<p class="text-sm text-slate-500">This Shop has no search URL (see <a href="/settings#shops" class="underline">Settings</a>): paste a product URL below.</p>
+    {% elif not error %}<p class="text-sm text-slate-500">No hits.</p>{% endif %}
     {% endfor %}
   </div>
   {% with product_id = product.id %}{% include "_paste.html" %}{% endwith %}

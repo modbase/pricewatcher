@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import urlencode
 
 from fastapi import BackgroundTasks, FastAPI, Form, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse, Response
@@ -12,7 +13,7 @@ from fastapi.templating import Jinja2Templates
 
 from . import alerts, checks, db, pricing, scheduler, settings
 from .pricing import eur
-from .shops import SHOPS
+from .shops import BUILTIN, SHOPS
 from .shops import Query as SearchQuery
 from .shops.jsonld import to_cents
 
@@ -187,8 +188,9 @@ def match_shop(request: Request, product_id: int, shop: str):
     except Exception as e:  # shown to the user, who can still paste a URL
         error = f"{type(e).__name__}: {e}"
     hits.sort(key=lambda h: not code_match(p, h))  # EAN/ASIN match first
+    no_search = getattr(SHOPS[shop], "search_url", None) == ""  # a custom Shop added without a search URL
     return templates.TemplateResponse(
-        request, "_match_shop.html", {"product": p, "shop": shop, "hits": hits, "error": error}
+        request, "_match_shop.html", {"product": p, "shop": shop, "hits": hits, "error": error, "no_search": no_search}
     )
 
 
@@ -264,9 +266,11 @@ def check_product(tasks: BackgroundTasks, product_id: int):
 
 
 @app.get("/settings")
-def settings_page(request: Request, saved: bool = False, telegram: str = ""):
+def settings_page(request: Request, saved: bool = False, telegram: str = "", shop_error: str = ""):
     return templates.TemplateResponse(request, "settings.html", {
         "s": settings.current,
+        "shop_error": shop_error,
+        "builtin_shops": list(BUILTIN),
         "tz": settings.TZ.key,
         "intervals": settings.INTERVALS,
         "saved": saved,
@@ -317,6 +321,27 @@ def save_telegram(
     with db.connect() as con:
         settings.save(con, values)
     return RedirectResponse("/settings?saved=1", status_code=303)
+
+
+@app.post("/settings/shops")
+def save_shop(domain: Annotated[str, Form()], search_url: Annotated[str, Form()] = ""):
+    """Adds a custom Shop, or changes its search URL when the domain is already there."""
+    try:
+        shop = settings.custom_shop({"domain": domain, "search_url": search_url})
+        custom = [c for c in settings.current["custom_shops"] if c["domain"] != shop["domain"]] + [shop]
+        with db.connect() as con:
+            settings.save(con, {**settings.current, "custom_shops": custom})
+    except ValueError as e:
+        return RedirectResponse(f"/settings?{urlencode({'shop_error': str(e)})}#shops", status_code=303)
+    return RedirectResponse("/settings?saved=1#shops", status_code=303)
+
+
+@app.post("/settings/shops/delete")
+def delete_shop(domain: Annotated[str, Form()]):
+    custom = [c for c in settings.current["custom_shops"] if c["domain"] != domain]
+    with db.connect() as con:
+        settings.save(con, {**settings.current, "custom_shops": custom})
+    return RedirectResponse("/settings?saved=1#shops", status_code=303)
 
 
 @app.post("/settings/telegram-test")
