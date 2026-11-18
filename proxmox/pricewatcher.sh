@@ -24,7 +24,7 @@ if pct status "$CTID" >/dev/null 2>&1; then
   echo "Container $CTID exists: updating Pricewatcher in it (data/ and .env are kept)."
 else
   pveam update >/dev/null
-  TEMPLATE=$(pveam available --section system | awk '{print $2}' | grep '^debian-13-standard' | sort -V | tail -1)
+  TEMPLATE=$(pveam available --section system | awk '{print $2}' | grep "^debian-13-standard_.*_$(dpkg --print-architecture)\." | sort -V | tail -1)
   [ -n "$TEMPLATE" ] || { echo "No Debian 13 template found in 'pveam available'." >&2; exit 1; }
   pveam list "$TEMPLATE_STORAGE" | grep -q "$TEMPLATE" || pveam download "$TEMPLATE_STORAGE" "$TEMPLATE"
   echo "Creating container $CTID ($CT_HOSTNAME)..."

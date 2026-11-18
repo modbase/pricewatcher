@@ -4,7 +4,7 @@
 set -euo pipefail
 
 APP=/opt/pricewatcher
-export DEBIAN_FRONTEND=noninteractive PLAYWRIGHT_BROWSERS_PATH=$APP/browsers
+export LC_ALL=C.UTF-8 DEBIAN_FRONTEND=noninteractive PLAYWRIGHT_BROWSERS_PATH=$APP/browsers
 
 echo "Installing packages..."
 apt-get update -qq
