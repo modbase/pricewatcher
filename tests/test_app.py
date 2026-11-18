@@ -188,5 +188,6 @@ def test_delete_asks_in_a_dialog(tmp_path, monkeypatch):
     with TestClient(app) as c:
         page = c.get("/products/1").text
         assert 'id="delete-dialog"' in page and "cannot be undone" in page and "Archive instead" in page
+        assert 'id="remove-dialog"' in page and 'data-action="/products/1/listings/' in page
         c.post("/products/1/delete")
         assert c.get("/products/1").status_code == 404
