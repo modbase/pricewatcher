@@ -6,6 +6,10 @@ where each one is cheapest right now (shipping included), and pings you on Teleg
 target or hits an all-time low. Handy for Black Friday, Cyber Monday and Christmas shopping, or for that TV
 you've been eyeing for months.
 
+![Overview: every Product with its Cheapest Shop](docs/overview.png)
+
+![Product page: every Shop's price, shipping and stock](docs/product.png)
+
 - One row per Product with its Cheapest Shop; click through for every Shop's price and the price history.
 - Target Price and all-time-low alerts on Telegram, without repeats when prices bounce.
 - A bell in the header with recent price changes.
