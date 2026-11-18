@@ -44,6 +44,15 @@ class FakeShop(Shop):
         return Offer(1000, 0, True)
 
 
+def test_name_search_hides_unrelated_hits(tmp_path, monkeypatch):
+    monkeypatch.setenv("PRICEWATCHER_DB", str(tmp_path / "test.db"))
+    monkeypatch.setitem(SHOPS, "fake.be", FakeShop())
+    with TestClient(app) as c:
+        c.post("/products", data={"name": "right", "shop": ["fake.be"]})
+        hits = c.get("/products/1/match/fake.be").text
+        assert "Right" in hits and "Other" not in hits
+
+
 def test_add_flow(tmp_path, monkeypatch):
     monkeypatch.setenv("PRICEWATCHER_DB", str(tmp_path / "test.db"))
     monkeypatch.setitem(SHOPS, "fake.be", FakeShop())

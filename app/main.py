@@ -1,4 +1,5 @@
 import os
+import re
 from collections import defaultdict
 from itertools import groupby
 from contextlib import asynccontextmanager
@@ -173,6 +174,12 @@ def code_match(product, hit) -> bool:
     return bool((product["ean"] and hit.ean == product["ean"]) or (product["asin"] and hit.asin == product["asin"]))
 
 
+def name_match(name: str, title: str) -> bool:
+    """Every word of the name appears in the title, ignoring case and spacing ("UGT 3000" ~ "UGT3000")."""
+    flat = re.sub(r"\W", "", title.lower())
+    return all(w in flat for w in re.findall(r"\w+", name.lower()))
+
+
 templates.env.globals["code_match"] = code_match
 
 
@@ -187,6 +194,8 @@ def match_shop(request: Request, product_id: int, shop: str):
         hits = SHOPS[shop].search(SearchQuery(p["name"], p["ean"], p["mpn"], p["asin"]))
     except Exception as e:  # shown to the user, who can still paste a URL
         error = f"{type(e).__name__}: {e}"
+    if not (p["ean"] or p["mpn"]):  # a name search: shops return their nearest products even when they don't carry it
+        hits = [h for h in hits if code_match(p, h) or name_match(p["name"], h.title)]
     hits.sort(key=lambda h: not code_match(p, h))  # EAN/ASIN match first
     no_search = getattr(SHOPS[shop], "search_url", None) == ""  # a custom Shop added without a search URL
     return templates.TemplateResponse(
