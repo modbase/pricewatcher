@@ -1,0 +1,21 @@
+name: Bug report
+description: Something is broken or behaves wrong
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What went wrong, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Shop, product URL or search query, and what you did.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      render: text
