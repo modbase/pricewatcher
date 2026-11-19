@@ -1,0 +1,23 @@
+name: Feature request
+description: Something new, or a change to how something works
+labels: [enhancement, needs-triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What you're trying to do, and why it's hard or impossible today.
+    validations:
+      required: true
+  - type: textarea
+    id: want
+    attributes:
+      label: What you want
+      description: What should happen. How would you know it's done?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Out of scope
+      description: What this should not include or change.
